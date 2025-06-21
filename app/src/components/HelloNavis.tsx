@@ -19,7 +19,7 @@ const HelloNavis: React.FC = () => {
             Setup Complete! 🎉
           </h2>
           <p className="text-gray-600">
-            Your Navis frontend is ready for development with React, TypeScript, Tailwind CSS, and Redux Toolkit.
+            The Navis frontend is ready for development with React, TypeScript, Tailwind CSS, and Redux Toolkit.
           </p>
         </div>
       </div>
