@@ -1,4 +1,26 @@
-# Getting Started with Create React App
+# Navis MVP Frontend
+
+This is the frontend application for the Navis MVP - an AI-powered customer service and sales platform focused on real-time call transcription, live RAG assistance, and actionable analytics.
+
+## Tech Stack
+
+- **React 18+** with TypeScript
+- **Redux Toolkit** for state management
+- **Tailwind CSS** for styling
+- **ESLint & Prettier** for code quality
+- **Husky** for git hooks
+
+## Project Structure
+
+- `src/components`: Reusable UI components
+- `src/pages`: Route-level components for main app sections
+- `src/store`: Redux state management
+- `src/hooks`: Custom React hooks
+- `src/services`: API/data access logic
+- `src/styles`: Tailwind and global styles
+- `src/utils`: Helper utilities
+
+## Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
