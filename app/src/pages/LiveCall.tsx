@@ -544,11 +544,7 @@ export default function LiveCall() {
                 </div>
               </div>
               <div 
-                className="flex-1 overflow-y-auto p-4 bg-gradient-to-br from-yellow-50 to-blue-50 max-h-96"
-                style={{
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: '#cbd5e1 #f1f5f9'
-                }}
+                className="flex-1 overflow-y-auto p-4 bg-muted/30 max-h-96 scrollbar-thin"
               >
                 {/* IMPLEMENT LATER: Connect to backend for real-time note synchronization */}
                 {/* Expected features: auto-save, real-time collaboration, note categories, search */}
@@ -560,33 +556,33 @@ export default function LiveCall() {
                       <div 
                         key={note.id}
                         className={`relative p-3 rounded-lg shadow-md transition-all hover:shadow-lg ${
-                          note.color === 'yellow' ? 'bg-yellow-200' :
-                          note.color === 'blue' ? 'bg-blue-200' :
-                          note.color === 'green' ? 'bg-green-200' :
-                          'bg-pink-200'
+                          note.color === 'yellow' ? 'bg-yellow-200 dark:bg-yellow-800/40 dark:text-yellow-100' :
+                          note.color === 'blue' ? 'bg-blue-200 dark:bg-blue-800/40 dark:text-blue-100' :
+                          note.color === 'green' ? 'bg-green-200 dark:bg-green-800/40 dark:text-green-100' :
+                          'bg-pink-200 dark:bg-pink-800/40 dark:text-pink-100'
                         }`}
                         style={{
                           transform: `rotate(${Math.random() * 4 - 2}deg)`,
                         }}
                       >
                         <textarea
-                          className="w-full bg-transparent border-none resize-none text-sm placeholder-gray-600 focus:outline-none"
+                          className="w-full bg-transparent border-none resize-none text-sm placeholder-gray-600 dark:placeholder-gray-400 focus:outline-none"
                           value={note.content}
                           onChange={(e) => updateNote(note.id, e.target.value)}
                           placeholder="Add a note..."
                           rows={3}
                         />
-                        <div className="flex items-center justify-between mt-2 text-xs text-gray-600">
+                        <div className="flex items-center justify-between mt-2 text-xs text-gray-600 dark:text-gray-300">
                           <span>{note.createdAt.toLocaleTimeString()}</span>
                           <div className="flex gap-1">
                             <button 
-                              className="p-1 hover:bg-black/10 rounded"
+                              className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded"
                               title="Edit note"
                             >
                               <Edit3 size={12} />
                             </button>
                             <button 
-                              className="p-1 hover:bg-black/10 rounded text-red-600"
+                              className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded text-red-600 dark:text-red-400"
                               onClick={() => deleteNote(note.id)}
                               title="Delete note"
                             >
@@ -600,38 +596,34 @@ export default function LiveCall() {
                 ) : (
                   // Bullet List View
                   <div 
-                    className="bg-white rounded-lg p-6 shadow-sm min-h-full overflow-y-auto max-h-96"
-                    style={{
-                      scrollbarWidth: 'thin',
-                      scrollbarColor: '#cbd5e1 #f1f5f9'
-                    }}
+                    className="bg-card border border-border rounded-lg p-6 shadow-sm min-h-full overflow-y-auto max-h-96 scrollbar-thin"
                   >
                     <div className="prose prose-sm max-w-none">
-                      <h3 className="text-lg font-semibold mb-4 text-gray-800">Call Notes Summary</h3>
+                      <h3 className="text-lg font-semibold mb-4 text-card-foreground">Call Notes Summary</h3>
                       {notes.length === 0 ? (
-                        <p className="text-gray-500 italic">No notes yet. Add some notes to see them as bullet points here.</p>
+                        <p className="text-muted-foreground italic">No notes yet. Add some notes to see them as bullet points here.</p>
                       ) : (
                         <ul className="space-y-3">
                           {notes.map((note, index) => (
                             <li key={note.id} className="group">
                               <div className="flex items-start gap-3">
                                 <div className="flex-1">
-                                  <div className="text-gray-800 leading-relaxed">
+                                  <div className="text-card-foreground leading-relaxed">
                                     {note.content || "Empty note"}
                                   </div>
-                                  <div className="text-xs text-gray-500 mt-1">
+                                  <div className="text-xs text-muted-foreground mt-1">
                                     Added at {note.createdAt.toLocaleTimeString()}
                                   </div>
                                 </div>
                                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                                   <button 
-                                    className="p-1 hover:bg-gray-100 rounded text-gray-600"
+                                    className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
                                     title="Edit note"
                                   >
                                     <Edit3 size={14} />
                                   </button>
                                   <button 
-                                    className="p-1 hover:bg-gray-100 rounded text-red-600"
+                                    className="p-1 hover:bg-muted rounded text-red-600 dark:text-red-400"
                                     onClick={() => deleteNote(note.id)}
                                     title="Delete note"
                                   >
@@ -639,7 +631,7 @@ export default function LiveCall() {
                                   </button>
                                 </div>
                               </div>
-                              {index < notes.length - 1 && <hr className="mt-3 border-gray-200" />}
+                              {index < notes.length - 1 && <hr className="mt-3 border-border" />}
                             </li>
                           ))}
                         </ul>
@@ -680,12 +672,7 @@ export default function LiveCall() {
             </div>
 
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto bg-muted/30 rounded-lg p-3 mb-3 min-h-0 max-h-80"
-              style={{
-                scrollbarWidth: 'thin',
-                scrollbarColor: '#cbd5e1 #f1f5f9'
-              }}
-            >
+            <div className="flex-1 overflow-y-auto bg-muted/30 rounded-lg p-3 mb-3 min-h-0 max-h-80 scrollbar-thin">
               {/* IMPLEMENT LATER: Load chat history from backend and implement real-time messaging */}
               {/* Expected WebSocket events: 'message-received', 'ai-typing', 'message-delivered' */}
               <div className="space-y-3">

@@ -401,30 +401,30 @@ const getTicketStatusIcon = (status: string) => {
 const getTicketStatusColor = (status: string) => {
   switch (status) {
     case "active":
-      return "bg-blue-100 text-blue-800";
+      return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300";
     case "pending":
-      return "bg-yellow-100 text-yellow-800";
+      return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300";
     case "resolved":
-      return "bg-green-100 text-green-800";
+      return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300";
     case "closed":
-      return "bg-gray-100 text-gray-800";
+      return "bg-gray-100 text-gray-800 dark:bg-gray-800/20 dark:text-gray-300";
     default:
-      return "bg-gray-100 text-gray-800";
+      return "bg-gray-100 text-gray-800 dark:bg-gray-800/20 dark:text-gray-300";
   }
 };
 
 const getPriorityColor = (priority: string) => {
   switch (priority) {
     case "urgent":
-      return "bg-red-100 text-red-800";
+      return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300";
     case "high":
-      return "bg-orange-100 text-orange-800";
+      return "bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300";
     case "medium":
-      return "bg-yellow-100 text-yellow-800";
+      return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300";
     case "low":
-      return "bg-green-100 text-green-800";
+      return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300";
     default:
-      return "bg-gray-100 text-gray-800";
+      return "bg-gray-100 text-gray-800 dark:bg-gray-800/20 dark:text-gray-300";
   }
 };
 
@@ -657,8 +657,8 @@ export default function Documents() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Documents</h1>
-          <p className="text-sm text-gray-600">Upload, manage, and share documents</p>
+          <h1 className="text-2xl font-semibold text-foreground">Documents</h1>
+          <p className="text-sm text-muted-foreground">Upload, manage, and share documents</p>
         </div>
         <div className="flex items-center space-x-2">
           <Button
@@ -672,13 +672,13 @@ export default function Documents() {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+      <div className="flex space-x-1 bg-muted/50 p-1 rounded-lg">
         <button
           onClick={() => setActiveTab("documents")}
           className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
             activeTab === "documents"
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-600 hover:text-gray-900"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <FileText className="w-4 h-4" />
@@ -688,8 +688,8 @@ export default function Documents() {
           onClick={() => setActiveTab("tickets")}
           className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
             activeTab === "tickets"
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-600 hover:text-gray-900"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <Ticket className="w-4 h-4" />
@@ -703,16 +703,16 @@ export default function Documents() {
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
               isDragging 
-                ? "border-blue-500 bg-blue-50" 
-                : "border-gray-300 hover:border-gray-400"
+                ? "border-primary bg-primary/10" 
+                : "border-border hover:border-primary/50"
             }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Upload Documents</h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">Upload Documents</h3>
+            <p className="text-sm text-muted-foreground mb-4">
               Drag and drop files here, or click to select files
             </p>
             <Button
@@ -722,7 +722,7 @@ export default function Documents() {
               <Paperclip className="w-4 h-4 mr-2" />
               Choose Files
             </Button>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Supported formats: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, PNG, JPG, MP4, etc.
             </p>
             <input
@@ -741,12 +741,12 @@ export default function Documents() {
                 <div key={fileName} className="flex items-center space-x-3">
                   <div className="flex-1">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-700">{fileName}</span>
-                      <span className="text-gray-500">{progress}%</span>
+                      <span className="text-foreground">{fileName}</span>
+                      <span className="text-muted-foreground">{progress}%</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-muted rounded-full h-2">
                       <div
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        className="bg-primary h-2 rounded-full transition-all duration-300"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
@@ -762,7 +762,7 @@ export default function Documents() {
       <Card className="p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <input
               type="text"
               placeholder={
@@ -772,11 +772,11 @@ export default function Documents() {
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
             />
           </div>
           <div className="flex items-center space-x-2">
-            <Filter className="w-4 h-4 text-gray-400" />
+            <Filter className="w-4 h-4 text-muted-foreground" />
             <select
               value={activeTab === "documents" ? selectedCategory : selectedTicketStatus}
               onChange={(e) => 
@@ -784,7 +784,7 @@ export default function Documents() {
                   ? setSelectedCategory(e.target.value)
                   : setSelectedTicketStatus(e.target.value)
               }
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
             >
               {(activeTab === "documents" ? fileTypeCategories : ticketStatusCategories).map(category => (
                 <option key={category} value={category}>
@@ -799,7 +799,7 @@ export default function Documents() {
       {/* Documents List/Grid */}
       <Card className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-medium text-gray-900">
+          <h2 className="text-lg font-medium text-foreground">
             {activeTab === "documents" 
               ? `Documents (${filteredDocuments.length})`
               : `Tickets with Documents (${filteredTicketDocuments.length})`
@@ -811,9 +811,9 @@ export default function Documents() {
           // Regular Documents View
           filteredDocuments.length === 0 ? (
             <div className="text-center py-12">
-              <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No documents found</h3>
-              <p className="text-gray-600">
+              <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">No documents found</h3>
+              <p className="text-muted-foreground">
                 {searchQuery || selectedCategory !== "All" 
                   ? "Try adjusting your search or filter criteria" 
                   : "Upload your first document to get started"}
@@ -828,7 +828,7 @@ export default function Documents() {
               {filteredDocuments.map((document) => (
                 <div
                   key={document.id}
-                  className={`border rounded-lg p-4 hover:shadow-md transition-shadow ${
+                  className={`border border-border rounded-lg p-4 hover:shadow-md transition-shadow bg-card ${
                     viewMode === "list" ? "flex items-center space-x-4" : ""
                   }`}
                 >
@@ -837,17 +837,17 @@ export default function Documents() {
                     <div className="space-y-3">
                       <div className="flex items-center space-x-2">
                         {getFileIcon(document.fileType)}
-                        <span className="text-sm text-gray-500">{document.fileType.split('/')[1]?.toUpperCase()}</span>
+                        <span className="text-sm text-muted-foreground">{document.fileType.split('/')[1]?.toUpperCase()}</span>
                       </div>
                       <div>
-                        <h3 className="font-medium text-gray-900 truncate" title={document.originalName}>
+                        <h3 className="font-medium text-foreground truncate" title={document.originalName}>
                           {document.originalName}
                         </h3>
-                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                           {document.description || "No description"}
                         </p>
                       </div>
-                      <div className="space-y-1 text-xs text-gray-500">
+                      <div className="space-y-1 text-xs text-muted-foreground">
                         <div className="flex items-center space-x-1">
                           <User className="w-3 h-3" />
                           <span>{document.uploadedByName}</span>
@@ -882,11 +882,11 @@ export default function Documents() {
                       <div className="flex items-center space-x-4">
                         {getFileIcon(document.fileType)}
                         <div>
-                          <h3 className="font-medium text-gray-900">{document.originalName}</h3>
-                          <p className="text-sm text-gray-600">{document.description || "No description"}</p>
+                          <h3 className="font-medium text-foreground">{document.originalName}</h3>
+                          <p className="text-sm text-muted-foreground">{document.description || "No description"}</p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                         <span>{document.uploadedByName}</span>
                         <span>{formatDate(document.uploadDate)}</span>
                         <span>{formatFileSize(document.fileSize)}</span>
@@ -918,9 +918,9 @@ export default function Documents() {
           // Ticket Documents View
           filteredTicketDocuments.length === 0 ? (
             <div className="text-center py-12">
-              <Ticket className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets with documents found</h3>
-              <p className="text-gray-600">
+              <Ticket className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">No tickets with documents found</h3>
+              <p className="text-muted-foreground">
                 {searchQuery || selectedTicketStatus !== "All" 
                   ? "Try adjusting your search or filter criteria" 
                   : "No tickets have documents attached yet"}
@@ -929,13 +929,13 @@ export default function Documents() {
           ) : (
             <div className="space-y-6">
               {filteredTicketDocuments.map((ticket) => (
-                <div key={ticket.id} className="border rounded-lg p-6">
+                <div key={ticket.id} className="border border-border rounded-lg p-6 bg-card">
                   {/* Ticket Header */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-2">
-                        <Ticket className="w-5 h-5 text-gray-600" />
-                        <h3 className="text-lg font-medium text-gray-900">{ticket.ticketTitle}</h3>
+                        <Ticket className="w-5 h-5 text-muted-foreground" />
+                        <h3 className="text-lg font-medium text-foreground">{ticket.ticketTitle}</h3>
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTicketStatusColor(ticket.ticketStatus)}`}>
                           {ticket.ticketStatus.charAt(0).toUpperCase() + ticket.ticketStatus.slice(1)}
                         </span>
@@ -943,7 +943,7 @@ export default function Documents() {
                           {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
                         </span>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
                         <div>
                           <span className="font-medium">Customer:</span> {ticket.customer}
                         </div>
@@ -975,23 +975,23 @@ export default function Documents() {
 
                   {/* Ticket Notes */}
                   {ticket.notes && (
-                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-900 mb-1">Notes</h4>
-                      <p className="text-sm text-gray-700">{ticket.notes}</p>
+                    <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+                      <h4 className="text-sm font-medium text-foreground mb-1">Notes</h4>
+                      <p className="text-sm text-muted-foreground">{ticket.notes}</p>
                     </div>
                   )}
 
                   {/* Resolution Summary */}
                   {ticket.resolutionSummary && (
-                    <div className="mb-4 p-3 bg-green-50 rounded-lg">
-                      <h4 className="text-sm font-medium text-green-900 mb-1">Resolution Summary</h4>
-                      <p className="text-sm text-green-700">{ticket.resolutionSummary}</p>
+                    <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <h4 className="text-sm font-medium text-green-900 dark:text-green-100 mb-1">Resolution Summary</h4>
+                      <p className="text-sm text-green-700 dark:text-green-200">{ticket.resolutionSummary}</p>
                     </div>
                   )}
 
                   {/* Documents */}
                   <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-3">
+                    <h4 className="text-sm font-medium text-foreground mb-3">
                       Documents ({ticket.documents.length})
                     </h4>
                     <div className={
@@ -1002,7 +1002,7 @@ export default function Documents() {
                       {ticket.documents.map((document) => (
                         <div
                           key={document.id}
-                          className={`border rounded-lg p-3 hover:shadow-sm transition-shadow ${
+                          className={`border border-border rounded-lg p-3 hover:shadow-sm transition-shadow bg-card ${
                             viewMode === "list" ? "flex items-center space-x-3" : ""
                           }`}
                         >
@@ -1010,17 +1010,17 @@ export default function Documents() {
                             <div className="space-y-2">
                               <div className="flex items-center space-x-2">
                                 {getFileIcon(document.fileType)}
-                                <span className="text-xs text-gray-500">{document.fileType.split('/')[1]?.toUpperCase()}</span>
+                                <span className="text-xs text-muted-foreground">{document.fileType.split('/')[1]?.toUpperCase()}</span>
                               </div>
                               <div>
-                                <h5 className="text-sm font-medium text-gray-900 truncate" title={document.originalName}>
+                                <h5 className="text-sm font-medium text-foreground truncate" title={document.originalName}>
                                   {document.originalName}
                                 </h5>
-                                <p className="text-xs text-gray-600 mt-1">
+                                <p className="text-xs text-muted-foreground mt-1">
                                   {document.description || "No description"}
                                 </p>
                               </div>
-                              <div className="flex items-center justify-between text-xs text-gray-500">
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
                                 <span>{formatFileSize(document.fileSize)}</span>
                                 <div className="flex items-center space-x-1">
                                   <Button
@@ -1048,11 +1048,11 @@ export default function Documents() {
                               <div className="flex items-center space-x-3">
                                 {getFileIcon(document.fileType)}
                                 <div>
-                                  <h5 className="text-sm font-medium text-gray-900">{document.originalName}</h5>
-                                  <p className="text-xs text-gray-600">{document.description || "No description"}</p>
+                                  <h5 className="text-sm font-medium text-foreground">{document.originalName}</h5>
+                                  <p className="text-xs text-muted-foreground">{document.description || "No description"}</p>
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-3 text-xs text-gray-500">
+                              <div className="flex items-center space-x-3 text-xs text-muted-foreground">
                                 <span>{formatFileSize(document.fileSize)}</span>
                                 <div className="flex items-center space-x-1">
                                   <Button

@@ -79,7 +79,6 @@ function DropdownMenuContent({ children, className, align = "end" }: DropdownMen
       ref={contentRef}
       className={cn(
         "absolute top-full mt-2 w-56 rounded-md border border-border bg-popover shadow-lg z-50",
-        "dark:bg-popover dark:border-border dark:shadow-dark-card",
         align === "end" ? "right-0" : "left-0",
         className
       )}

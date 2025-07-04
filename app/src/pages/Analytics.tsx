@@ -23,7 +23,14 @@ import {
   Activity,
   Award,
   BookOpen,
-  Zap
+  Zap,
+  X,
+  Maximize2,
+  Calendar as CalendarIcon,
+  ArrowDown,
+  ArrowUp,
+  Info,
+  HelpCircle
 } from "lucide-react";
 import { useState } from "react";
 
@@ -171,10 +178,102 @@ const mockAnalyticsData = {
   ],
 };
 
+// IMPLEMENT LATER: Time series data structures for detailed graphs
+// Expected backend integration for metric trending:
+interface MetricTimeSeriesData {
+  date: string;
+  value: number;
+  teamAverage?: number;
+  companyAverage?: number;
+  events?: {
+    type: 'spike' | 'drop' | 'improvement' | 'concern';
+    description: string;
+    impact: 'high' | 'medium' | 'low';
+  }[];
+}
+
+// IMPLEMENT LATER: Backend API endpoints for detailed metric data
+// - GET /api/analytics/metrics/total-calls/timeseries?range=7d&agentId=current
+// - GET /api/analytics/metrics/resolution-score/timeseries?range=30d&agentId=current
+// - GET /api/analytics/metrics/satisfaction/timeseries?range=90d&agentId=current
+// - GET /api/analytics/metrics/productivity/timeseries?range=7d&agentId=current
+// - GET /api/analytics/metrics/call-duration/timeseries?range=30d&agentId=current
+// - GET /api/analytics/metrics/ticket-time/timeseries?range=7d&agentId=current
+// - GET /api/analytics/metrics/resolution-time/timeseries?range=30d&agentId=current
+
+// Mock time series data for detailed metric graphs
+const mockTimeSeriesData = {
+  totalCalls: [
+    { date: "2025-06-24", value: 18, teamAverage: 16, companyAverage: 15 },
+    { date: "2025-06-25", value: 22, teamAverage: 17, companyAverage: 16 },
+    { date: "2025-06-26", value: 19, teamAverage: 18, companyAverage: 17 },
+    { date: "2025-06-27", value: 28, teamAverage: 19, companyAverage: 18, events: [{ type: 'spike', description: 'High call volume due to system outage', impact: 'high' }] },
+    { date: "2025-06-28", value: 17, teamAverage: 16, companyAverage: 15 },
+    { date: "2025-06-29", value: 25, teamAverage: 18, companyAverage: 17 },
+    { date: "2025-06-30", value: 23, teamAverage: 19, companyAverage: 18 },
+  ],
+  resolutionScore: [
+    { date: "2025-06-24", value: 85, teamAverage: 82, companyAverage: 80 },
+    { date: "2025-06-25", value: 87, teamAverage: 83, companyAverage: 81 },
+    { date: "2025-06-26", value: 92, teamAverage: 85, companyAverage: 82, events: [{ type: 'improvement', description: 'Completed advanced training module', impact: 'medium' }] },
+    { date: "2025-06-27", value: 88, teamAverage: 84, companyAverage: 81 },
+    { date: "2025-06-28", value: 94, teamAverage: 86, companyAverage: 83 },
+    { date: "2025-06-29", value: 89, teamAverage: 85, companyAverage: 82 },
+    { date: "2025-06-30", value: 91, teamAverage: 86, companyAverage: 83 },
+  ],
+  satisfaction: [
+    { date: "2025-06-24", value: 4.3, teamAverage: 4.1, companyAverage: 4.0 },
+    { date: "2025-06-25", value: 4.1, teamAverage: 4.0, companyAverage: 3.9 },
+    { date: "2025-06-26", value: 4.5, teamAverage: 4.2, companyAverage: 4.1 },
+    { date: "2025-06-27", value: 4.2, teamAverage: 4.1, companyAverage: 4.0 },
+    { date: "2025-06-28", value: 4.7, teamAverage: 4.3, companyAverage: 4.2 },
+    { date: "2025-06-29", value: 4.4, teamAverage: 4.2, companyAverage: 4.1 },
+    { date: "2025-06-30", value: 4.6, teamAverage: 4.3, companyAverage: 4.2 },
+  ],
+  productivityScore: [
+    { date: "2025-06-24", value: 82, teamAverage: 78, companyAverage: 75 },
+    { date: "2025-06-25", value: 85, teamAverage: 80, companyAverage: 77 },
+    { date: "2025-06-26", value: 88, teamAverage: 82, companyAverage: 79 },
+    { date: "2025-06-27", value: 84, teamAverage: 81, companyAverage: 78 },
+    { date: "2025-06-28", value: 90, teamAverage: 84, companyAverage: 81 },
+    { date: "2025-06-29", value: 87, teamAverage: 83, companyAverage: 80 },
+    { date: "2025-06-30", value: 89, teamAverage: 85, companyAverage: 82 },
+  ],
+  callDuration: [
+    { date: "2025-06-24", value: 4.2, teamAverage: 4.8, companyAverage: 5.2 },
+    { date: "2025-06-25", value: 4.8, teamAverage: 5.1, companyAverage: 5.5 },
+    { date: "2025-06-26", value: 4.1, teamAverage: 4.9, companyAverage: 5.3 },
+    { date: "2025-06-27", value: 4.9, teamAverage: 5.2, companyAverage: 5.6, events: [{ type: 'spike', description: 'Complex technical issues during system outage', impact: 'high' }] },
+    { date: "2025-06-28", value: 3.8, teamAverage: 4.6, companyAverage: 5.0, events: [{ type: 'improvement', description: 'Improved questioning techniques', impact: 'medium' }] },
+    { date: "2025-06-29", value: 4.3, teamAverage: 4.9, companyAverage: 5.3 },
+    { date: "2025-06-30", value: 4.1, teamAverage: 4.8, companyAverage: 5.2 },
+  ],
+  timePerTicket: [
+    { date: "2025-06-24", value: 12.8, teamAverage: 14.2, companyAverage: 15.5 },
+    { date: "2025-06-25", value: 13.5, teamAverage: 14.8, companyAverage: 16.1 },
+    { date: "2025-06-26", value: 11.9, teamAverage: 13.8, companyAverage: 15.2 },
+    { date: "2025-06-27", value: 14.1, teamAverage: 15.5, companyAverage: 16.8 },
+    { date: "2025-06-28", value: 10.8, teamAverage: 13.2, companyAverage: 14.6 },
+    { date: "2025-06-29", value: 12.5, teamAverage: 14.1, companyAverage: 15.4 },
+    { date: "2025-06-30", value: 11.7, teamAverage: 13.6, companyAverage: 15.0 },
+  ],
+  timeToResolution: [
+    { date: "2025-06-24", value: 2.9, teamAverage: 3.2, companyAverage: 3.8 },
+    { date: "2025-06-25", value: 3.1, teamAverage: 3.4, companyAverage: 4.0 },
+    { date: "2025-06-26", value: 2.6, teamAverage: 3.0, companyAverage: 3.6 },
+    { date: "2025-06-27", value: 3.3, teamAverage: 3.6, companyAverage: 4.2 },
+    { date: "2025-06-28", value: 2.4, teamAverage: 2.8, companyAverage: 3.4, events: [{ type: 'improvement', description: 'Faster escalation process', impact: 'medium' }] },
+    { date: "2025-06-29", value: 2.8, teamAverage: 3.1, companyAverage: 3.7 },
+    { date: "2025-06-30", value: 2.7, teamAverage: 3.0, companyAverage: 3.6 },
+  ],
+};
+
 export default function Analytics() {
   const [selectedTimeRange, setSelectedTimeRange] = useState("7d");
   const [selectedAgent, setSelectedAgent] = useState("all");
   const [activeTab, setActiveTab] = useState("overview");
+  const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
+  const [selectedDateRange, setSelectedDateRange] = useState("7d");
   
   // IMPLEMENT LATER: Fetch analytics and performance data from backend (Supabase).
   const data = mockAnalyticsData;
@@ -206,9 +305,24 @@ export default function Analytics() {
     value: string | number,
     icon: React.ReactNode,
     change?: number,
-    subtitle?: string
+    subtitle?: string,
+    onClick?: () => void
   ) => (
-    <Card className="p-6 hover:shadow-lg transition-shadow">
+    <Card 
+      className={`p-6 transition-all duration-200 ${
+        onClick ? 'hover:shadow-lg hover:scale-105 cursor-pointer border-2 hover:border-primary/50' : 'hover:shadow-lg'
+      }`}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      } : undefined}
+      aria-label={onClick ? `View detailed ${title} analytics` : undefined}
+    >
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
@@ -223,10 +337,390 @@ export default function Analytics() {
               {Math.abs(change)}%
             </div>
           )}
+          {onClick && (
+            <div className="flex items-center text-xs text-muted-foreground mt-1">
+              <BarChart3 className="w-3 h-3 mr-1" />
+              View Details
+            </div>
+          )}
         </div>
       </div>
     </Card>
   );
+
+  const renderDetailedMetricModal = () => {
+    if (!selectedMetric) return null;
+
+    const getMetricData = () => {
+      switch (selectedMetric) {
+        case 'totalCalls':
+          return {
+            title: 'Total Calls',
+            data: mockTimeSeriesData.totalCalls,
+            unit: 'calls',
+            color: 'text-blue-500',
+            bgColor: 'bg-blue-500',
+            description: 'Number of calls handled over time',
+            insights: [
+              'Peak performance on June 29th with 25 calls',
+              'Consistent above-team performance',
+              'System outage on June 27th caused spike in call volume'
+            ]
+          };
+        case 'resolutionScore':
+          return {
+            title: 'Average Resolution Score',
+            data: mockTimeSeriesData.resolutionScore,
+            unit: '%',
+            color: 'text-green-500',
+            bgColor: 'bg-green-500',
+            description: 'Percentage of issues resolved successfully',
+            insights: [
+              'Highest score of 94% on June 28th',
+              'Consistent improvement after training',
+              'Performing above team and company averages'
+            ]
+          };
+        case 'satisfaction':
+          return {
+            title: 'Customer Satisfaction',
+            data: mockTimeSeriesData.satisfaction,
+            unit: '/5',
+            color: 'text-purple-500',
+            bgColor: 'bg-purple-500',
+            description: 'Average customer satisfaction rating',
+            insights: [
+              'Excellent performance with 4.7 rating on June 28th',
+              'Consistently exceeding team expectations',
+              'Strong upward trend in customer feedback'
+            ]
+          };
+        case 'productivityScore':
+          return {
+            title: 'Productivity Score',
+            data: mockTimeSeriesData.productivityScore,
+            unit: '%',
+            color: 'text-orange-500',
+            bgColor: 'bg-orange-500',
+            description: 'Overall productivity rating based on multiple factors',
+            insights: [
+              'Peak productivity of 90% on June 28th',
+              'Strong performance above team average',
+              'Consistent improvement over time'
+            ]
+          };
+        case 'callDuration':
+          return {
+            title: 'Average Call Duration',
+            data: mockTimeSeriesData.callDuration,
+            unit: 'min',
+            color: 'text-blue-500',
+            bgColor: 'bg-blue-500',
+            description: 'Average duration of calls handled',
+            insights: [
+              'Excellent efficiency with 3.8 min average on June 28th',
+              'Significantly below team average (faster resolution)',
+              'Improved questioning techniques reducing call time'
+            ]
+          };
+        case 'timePerTicket':
+          return {
+            title: 'Time Per Ticket',
+            data: mockTimeSeriesData.timePerTicket,
+            unit: 'min',
+            color: 'text-green-500',
+            bgColor: 'bg-green-500',
+            description: 'Average time spent per ticket',
+            insights: [
+              'Best performance of 10.8 min on June 28th',
+              'Consistently faster than team average',
+              'Efficient ticket processing and resolution'
+            ]
+          };
+        case 'timeToResolution':
+          return {
+            title: 'Time to Resolution',
+            data: mockTimeSeriesData.timeToResolution,
+            unit: 'hours',
+            color: 'text-purple-500',
+            bgColor: 'bg-purple-500',
+            description: 'Average time to resolve issues',
+            insights: [
+              'Fastest resolution of 2.4 hours on June 28th',
+              'Significantly faster than team and company averages',
+              'Improved escalation process contributing to faster resolution'
+            ]
+          };
+        default:
+          return null;
+      }
+    };
+
+    const metricData = getMetricData();
+    if (!metricData) return null;
+
+    const maxValue = Math.max(...metricData.data.map(d => Math.max(d.value, d.teamAverage || 0, d.companyAverage || 0)));
+    const minValue = Math.min(...metricData.data.map(d => Math.min(d.value, d.teamAverage || 0, d.companyAverage || 0)));
+
+    // IMPLEMENT LATER: Export graph data functionality
+    const exportGraphData = () => {
+      // Expected functionality:
+      // - Generate CSV with time series data
+      // - Include all comparison data (team, company averages)
+      // - Add event annotations
+      // - Format for spreadsheet applications
+      
+      const csvData = [
+        ['Date', 'Your Value', 'Team Average', 'Company Average', 'Events'],
+        ...metricData.data.map(d => [
+          d.date,
+          d.value,
+          d.teamAverage || '',
+          d.companyAverage || '',
+          (d as any).events?.map((e: any) => `${e.type}: ${e.description}`).join('; ') || ''
+        ])
+      ];
+      
+      console.log("Exporting graph data:", csvData);
+      // In real implementation, convert to CSV and trigger download
+      alert(`${metricData.title} data export functionality will be implemented with backend integration`);
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+          {/* Modal Header */}
+          <div className="flex items-center justify-between p-6 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${metricData.color.replace('text-', 'bg-')}/10`}>
+                <BarChart3 className={`w-6 h-6 ${metricData.color}`} />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-card-foreground">{metricData.title}</h2>
+                <p className="text-sm text-muted-foreground">{metricData.description}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <CalendarIcon className="w-4 h-4" />
+                    {selectedDateRange === '7d' ? 'Last 7 days' : 
+                     selectedDateRange === '30d' ? 'Last 30 days' : 
+                     'Last 90 days'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => setSelectedDateRange("7d")}>Last 7 days</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSelectedDateRange("30d")}>Last 30 days</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSelectedDateRange("90d")}>Last 90 days</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="outline" size="sm" onClick={exportGraphData} className="gap-2">
+                <Download className="w-4 h-4" />
+                Export
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setSelectedMetric(null)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Modal Content */}
+          <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+            {/* Chart Area */}
+            <div className="mb-6">
+              <div className="bg-muted/30 rounded-lg p-4 mb-4">
+                {/* IMPLEMENT LATER: Replace with actual charting library like Chart.js, Recharts, or D3.js */}
+                <div className="text-center text-muted-foreground mb-4">
+                  <p className="text-sm">Interactive Chart Placeholder</p>
+                  <p className="text-xs">IMPLEMENT LATER: Replace with Chart.js, Recharts, or D3.js</p>
+                </div>
+                
+                {/* Simple SVG visualization placeholder */}
+                <div className="w-full h-64 bg-background rounded border relative overflow-hidden">
+                  <svg width="100%" height="100%" className="absolute inset-0">
+                    {/* Grid lines */}
+                    {[...Array(5)].map((_, i) => (
+                      <line
+                        key={i}
+                        x1="0"
+                        y1={`${20 + i * 15}%`}
+                        x2="100%"
+                        y2={`${20 + i * 15}%`}
+                        stroke="currentColor"
+                        strokeOpacity="0.1"
+                        className="text-muted-foreground"
+                      />
+                    ))}
+                    
+                    {/* Simple line chart representation */}
+                    <polyline
+                      points={metricData.data.map((d, i) => 
+                        `${10 + (i * 80) / (metricData.data.length - 1)},${90 - ((d.value - minValue) / (maxValue - minValue)) * 60}`
+                      ).join(' ')}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      className={metricData.color}
+                    />
+                    
+                    {/* Team average line */}
+                    {metricData.data[0].teamAverage && (
+                      <polyline
+                        points={metricData.data.map((d, i) => 
+                          `${10 + (i * 80) / (metricData.data.length - 1)},${90 - ((d.teamAverage! - minValue) / (maxValue - minValue)) * 60}`
+                        ).join(' ')}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeDasharray="5,5"
+                        className="text-muted-foreground"
+                        opacity="0.7"
+                      />
+                    )}
+                    
+                    {/* Data points */}
+                    {metricData.data.map((d, i) => (
+                      <circle
+                        key={i}
+                        cx={`${10 + (i * 80) / (metricData.data.length - 1)}%`}
+                        cy={`${90 - ((d.value - minValue) / (maxValue - minValue)) * 60}%`}
+                        r="4"
+                        fill="currentColor"
+                        className={metricData.color}
+                      />
+                    ))}
+                  </svg>
+                  
+                  {/* Legend */}
+                  <div className="absolute bottom-2 left-2 flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-1">
+                      <div className={`w-3 h-0.5 ${metricData.bgColor}`}></div>
+                      <span>Your Performance</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-0.5 bg-muted-foreground opacity-70" style={{ borderTop: '2px dashed' }}></div>
+                      <span>Team Average</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Interactive Controls */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-sm text-muted-foreground">
+                  Hover over data points for detailed information • Click and drag to zoom
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" disabled>
+                    <Maximize2 className="w-4 h-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" disabled>
+                    Compare
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Data Table */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="p-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Activity className="w-4 h-4" />
+                  Recent Data Points
+                </h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {metricData.data.slice(-7).reverse().map((d, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
+                      <span>{new Date(d.date).toLocaleDateString()}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{d.value}{metricData.unit}</span>
+                        {d.teamAverage && (
+                          <span className="text-muted-foreground">
+                            (Team: {d.teamAverage}{metricData.unit})
+                          </span>
+                        )}
+                        {(d as any).events && (d as any).events.length > 0 && (
+                          <Info className="w-3 h-3 text-blue-500" />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <Card className="p-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Zap className="w-4 h-4" />
+                  AI-Generated Insights
+                </h3>
+                <div className="space-y-2">
+                  {metricData.insights.map((insight, i) => (
+                    <div key={i} className="flex items-start gap-2 p-2 bg-muted/50 rounded text-sm">
+                      <div className="w-2 h-2 bg-primary rounded-full mt-1.5 flex-shrink-0"></div>
+                      <span>{insight}</span>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* IMPLEMENT LATER: AI-generated recommendations */}
+                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <strong>IMPLEMENT LATER:</strong> AI-generated recommendations based on metric trends, 
+                    performance patterns, and predictive analytics will appear here.
+                  </p>
+                </div>
+              </Card>
+            </div>
+
+            {/* Events and Annotations */}
+            {metricData.data.some(d => (d as any).events && (d as any).events.length > 0) && (
+              <Card className="p-4 mt-6">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  Key Events & Annotations
+                </h3>
+                <div className="space-y-2">
+                  {metricData.data.flatMap(d => 
+                    (d as any).events?.map((event: any) => ({
+                      ...event,
+                      date: d.date,
+                      value: d.value
+                    })) || []
+                  ).map((event: any, i) => (
+                    <div key={i} className="flex items-start gap-3 p-3 bg-muted/50 rounded">
+                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                        event.type === 'spike' ? 'bg-red-500' :
+                        event.type === 'drop' ? 'bg-orange-500' :
+                        event.type === 'improvement' ? 'bg-green-500' :
+                        'bg-blue-500'
+                      }`}></div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-sm capitalize">{event.type}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(event.date).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
+                        <Badge 
+                          variant={event.impact === 'high' ? 'danger' : event.impact === 'medium' ? 'warning' : 'default'}
+                          className="mt-2"
+                        >
+                          {event.impact} impact
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -261,7 +755,7 @@ export default function Analytics() {
 
       {/* Navigation Tabs */}
       <div className="flex gap-2 border-b">
-        {["overview", "efficiency", "performance", "quality", "trends"].map((tab) => (
+        {["overview", "today", "efficiency", "performance", "quality", "trends"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -279,33 +773,53 @@ export default function Analytics() {
       {/* Overview Tab */}
       {activeTab === "overview" && (
         <div className="space-y-6">
-          {/* Key Metrics */}
+          {/* Key Metrics - Now Interactive */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {renderMetricCard(
               "Total Calls",
               data.userPerformance.individual.callsHandled,
               <Phone className="w-6 h-6 text-blue-500" />,
-              12
+              12,
+              undefined,
+              () => setSelectedMetric('totalCalls')
             )}
             {renderMetricCard(
-              "Avg Resolution Time",
+              "Avg Resolution Score",
               `${data.efficiency.avgCallDuration}m`,
               <Clock className="w-6 h-6 text-green-500" />,
-              -8
+              -8,
+              undefined,
+              () => setSelectedMetric('resolutionScore')
             )}
             {renderMetricCard(
               "Customer Satisfaction",
               data.satisfaction.overall,
               <ThumbsUp className="w-6 h-6 text-purple-500" />,
-              data.satisfaction.trend * 10
+              data.satisfaction.trend * 10,
+              undefined,
+              () => setSelectedMetric('satisfaction')
             )}
             {renderMetricCard(
               "Productivity Score",
               `${data.efficiency.productivityScore}%`,
               <Target className="w-6 h-6 text-orange-500" />,
-              5
+              5,
+              undefined,
+              () => setSelectedMetric('productivityScore')
             )}
           </div>
+
+          {/* Interactive Guide */}
+          <Card className="p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2 mb-2">
+              <HelpCircle className="w-4 h-4 text-blue-600" />
+              <span className="font-medium text-blue-800 dark:text-blue-200">Interactive Analytics</span>
+            </div>
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              Click on any metric card above to view detailed time-series analysis, compare with team averages, 
+              and access AI-generated insights. Use the date range filters to explore historical trends.
+            </p>
+          </Card>
 
           {/* Performance Comparison */}
           <Card className="p-6">
@@ -369,7 +883,9 @@ export default function Analytics() {
                 {data.leaderboard.map((agent, index) => (
                   <div key={index} className={clsx(
                     "flex items-center justify-between p-3 rounded-lg",
-                    agent.name === "You" ? "bg-blue-50 border border-blue-200" : "bg-muted/50"
+                    agent.name === "You" 
+                      ? "bg-blue-50 border border-blue-200 dark:bg-blue-900/30 dark:border-blue-700" 
+                      : "bg-muted/50"
                   )}>
                     <div className="flex items-center gap-3">
                       <div className={clsx(
@@ -377,7 +893,7 @@ export default function Analytics() {
                         agent.rank === 1 ? "bg-yellow-500 text-white" :
                         agent.rank === 2 ? "bg-gray-400 text-white" :
                         agent.rank === 3 ? "bg-orange-500 text-white" :
-                        "bg-gray-200 text-gray-600"
+                        "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
                       )}>
                         {agent.rank}
                       </div>
@@ -423,32 +939,266 @@ export default function Analytics() {
         </div>
       )}
 
+      {/* Today Tab */}
+      {activeTab === "today" && (
+        <div className="space-y-6">
+          {/* Today's Performance Overview */}
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-blue-500" />
+              Today's Performance - {new Date().toLocaleDateString()}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {renderMetricCard(
+                "Calls Today",
+                23,
+                <Phone className="w-6 h-6 text-blue-500" />,
+                8,
+                "vs yesterday"
+              )}
+              {renderMetricCard(
+                "Avg Call Duration",
+                "4.1m",
+                <Clock className="w-6 h-6 text-green-500" />,
+                -5,
+                "vs yesterday"
+              )}
+              {renderMetricCard(
+                "Customer Satisfaction",
+                "4.7",
+                <ThumbsUp className="w-6 h-6 text-purple-500" />,
+                12,
+                "vs yesterday"
+              )}
+              {renderMetricCard(
+                "Tickets Resolved",
+                18,
+                <Target className="w-6 h-6 text-orange-500" />,
+                15,
+                "vs yesterday"
+              )}
+            </div>
+          </Card>
+
+          {/* Real-time Activity */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Activity className="w-5 h-5 text-green-500" />
+                Live Activity
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium">Currently on call</span>
+                  </div>
+                  <span className="text-sm text-green-600">12:34 elapsed</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                    <span className="text-sm">Last call completed</span>
+                    <span className="text-sm text-muted-foreground">2 mins ago</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                    <span className="text-sm">Next scheduled break</span>
+                    <span className="text-sm text-muted-foreground">in 45 mins</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Zap className="w-5 h-5 text-yellow-500" />
+                Today's Achievements
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <Award className="w-5 h-5 text-yellow-500" />
+                  <div>
+                    <p className="font-medium text-sm">Fastest Resolution</p>
+                    <p className="text-xs text-muted-foreground">Resolved ticket in 1.8 minutes</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <ThumbsUp className="w-5 h-5 text-blue-500" />
+                  <div>
+                    <p className="font-medium text-sm">High Satisfaction</p>
+                    <p className="text-xs text-muted-foreground">5-star rating from customer</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                  <Target className="w-5 h-5 text-purple-500" />
+                  <div>
+                    <p className="font-medium text-sm">Goal Achieved</p>
+                    <p className="text-xs text-muted-foreground">Exceeded daily call target</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Today's Schedule and Goals */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-blue-500" />
+                Schedule
+              </h3>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                  <span className="text-sm">Shift Start</span>
+                  <span className="text-sm font-medium">9:00 AM</span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                  <span className="text-sm">Lunch Break</span>
+                  <span className="text-sm font-medium">1:00 PM</span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                  <span className="text-sm">Shift End</span>
+                  <span className="text-sm font-medium">5:00 PM</span>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Target className="w-5 h-5 text-green-500" />
+                Daily Goals
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Calls Target</span>
+                    <span className="font-medium">23/25</span>
+                  </div>
+                  <Progress value={92} className="h-2" />
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Satisfaction Target</span>
+                    <span className="font-medium">4.7/4.5</span>
+                  </div>
+                  <Progress value={104} className="h-2" />
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Resolution Target</span>
+                    <span className="font-medium">18/20</span>
+                  </div>
+                  <Progress value={90} className="h-2" />
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-orange-500" />
+                Priority Tasks
+              </h3>
+              <div className="space-y-2">
+                <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
+                  <p className="text-sm font-medium text-red-700 dark:text-red-300">Follow up: Ticket #1234</p>
+                  <p className="text-xs text-red-600 dark:text-red-400">Due: 2:00 PM</p>
+                </div>
+                <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
+                  <p className="text-sm font-medium text-orange-700 dark:text-orange-300">Team meeting</p>
+                  <p className="text-xs text-orange-600 dark:text-orange-400">3:30 PM</p>
+                </div>
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Training module</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400">End of day</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Recent Call Summary */}
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-purple-500" />
+              Recent Calls Summary
+            </h3>
+            <div className="space-y-3">
+              {/* IMPLEMENT LATER: Replace with real call data from backend */}
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-sm">Technical Support - Ticket #5678</span>
+                  <Badge variant="success">Resolved</Badge>
+                </div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>Duration: 3.2 minutes • Customer: John Smith</p>
+                  <p>Issue: Password reset • Satisfaction: ⭐⭐⭐⭐⭐</p>
+                </div>
+              </div>
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-sm">Billing Inquiry - Ticket #5679</span>
+                  <Badge variant="warning">Pending</Badge>
+                </div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>Duration: 5.1 minutes • Customer: Jane Doe</p>
+                  <p>Issue: Billing dispute • Follow-up required</p>
+                </div>
+              </div>
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-sm">General Inquiry - Ticket #5680</span>
+                  <Badge variant="success">Resolved</Badge>
+                </div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>Duration: 2.8 minutes • Customer: Mike Johnson</p>
+                  <p>Issue: Account information • Satisfaction: ⭐⭐⭐⭐⭐</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* Efficiency Tab */}
       {activeTab === "efficiency" && (
         <div className="space-y-6">
+          {/* Interactive Efficiency Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {renderMetricCard(
               "Avg Call Duration",
               `${data.efficiency.avgCallDuration}m`,
               <Clock className="w-6 h-6 text-blue-500" />,
               -12,
-              "Target: 4.0m"
+              "Target: 4.0m",
+              () => setSelectedMetric('callDuration')
             )}
             {renderMetricCard(
               "Time Per Ticket",
               `${data.efficiency.timePerTicket}m`,
               <Target className="w-6 h-6 text-green-500" />,
               -5,
-              "Target: 10.0m"
+              "Target: 10.0m",
+              () => setSelectedMetric('timePerTicket')
             )}
             {renderMetricCard(
               "Time to Resolution",
               `${data.efficiency.timeToResolution}h`,
               <Activity className="w-6 h-6 text-purple-500" />,
               -18,
-              "Target: 2.0h"
+              "Target: 2.0h",
+              () => setSelectedMetric('timeToResolution')
             )}
           </div>
+
+          {/* Interactive Guide for Efficiency */}
+          <Card className="p-4 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+            <div className="flex items-center gap-2 mb-2">
+              <BarChart3 className="w-4 h-4 text-green-600" />
+              <span className="font-medium text-green-800 dark:text-green-200">Efficiency Analytics</span>
+            </div>
+            <p className="text-sm text-green-700 dark:text-green-300">
+              Click on efficiency metrics to view detailed trends, compare with team benchmarks, 
+              and identify optimization opportunities. Each graph includes AI-generated insights for improvement.
+            </p>
+          </Card>
 
           {/* Peak Hours Analysis */}
           <Card className="p-6">
@@ -836,6 +1586,9 @@ export default function Analytics() {
           </Card>
         </div>
       )}
+      
+      {/* Render Modal */}
+      {renderDetailedMetricModal()}
     </div>
   );
 }

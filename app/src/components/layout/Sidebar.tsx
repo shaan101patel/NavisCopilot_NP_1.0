@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Phone, Ticket, BarChart2, Settings, MessageSquare, FileText } from "lucide-react";
+import { Home, Phone, Ticket, BarChart2, Settings, MessageSquare, FileText, TrendingUp } from "lucide-react";
 import clsx from "clsx";
 
 const navItems = [
@@ -9,6 +9,7 @@ const navItems = [
   { to: "/messages", label: "Messages", icon: <MessageSquare size={20} /> },
   { to: "/documents", label: "Documents", icon: <FileText size={20} /> },
   { to: "/analytics", label: "Analytics", icon: <BarChart2 size={20} /> },
+  { to: "/agent-improvement", label: "Agent Improvement", icon: <TrendingUp size={20} /> },
   { to: "/admin", label: "Admin", icon: <Settings size={20} /> },
 ];
 

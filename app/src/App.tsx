@@ -5,6 +5,7 @@ import Dashboard from "@/pages/Dashboard";
 import LiveCall from "@/pages/LiveCall";
 import Tickets from "@/pages/Tickets";
 import Analytics from "@/pages/Analytics";
+import AgentImprovement from "@/pages/AgentImprovement";
 import Admin from "@/pages/Admin";
 import Messages from "@/pages/Messages";
 import Documents from "@/pages/Documents";
@@ -23,6 +24,7 @@ function App() {
           <Route path="/live-call" element={<LiveCall />} />
           <Route path="/tickets" element={<Tickets />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/agent-improvement" element={<AgentImprovement />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/documents" element={<Documents />} />

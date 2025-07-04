@@ -57,7 +57,7 @@ export function UserProfile() {
 
   if (!isAuthenticated || !user) {
     return (
-      <div className="flex items-center gap-2 text-sm text-gray-500">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <UserIcon />
         <span>Not signed in</span>
       </div>
@@ -76,9 +76,9 @@ export function UserProfile() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-gray-50 focus:bg-gray-50">
+      <DropdownMenuTrigger className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
         {/* Avatar */}
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white text-xs font-medium">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
           {user.avatar ? (
             <img
               src={user.avatar}
@@ -92,8 +92,8 @@ export function UserProfile() {
         
         {/* User info */}
         <div className="hidden md:block text-left">
-          <div className="font-medium text-gray-900">{user.name}</div>
-          <div className="text-xs text-gray-500 capitalize">{user.role}</div>
+          <div className="font-medium text-foreground">{user.name}</div>
+          <div className="text-xs text-muted-foreground capitalize">{user.role}</div>
         </div>
         
         {/* Chevron */}
@@ -102,9 +102,9 @@ export function UserProfile() {
 
       <DropdownMenuContent>
         <div className="px-4 py-3">
-          <div className="text-sm font-medium text-gray-900">{user.name}</div>
-          <div className="text-sm text-gray-500">{user.email}</div>
-          <div className="text-xs text-gray-400 capitalize mt-1">{user.role}</div>
+          <div className="text-sm font-medium text-foreground">{user.name}</div>
+          <div className="text-sm text-muted-foreground">{user.email}</div>
+          <div className="text-xs text-muted-foreground capitalize mt-1">{user.role}</div>
         </div>
         
         <DropdownMenuSeparator />
@@ -122,7 +122,7 @@ export function UserProfile() {
         <DropdownMenuItem
           icon={<LogoutIcon />}
           onClick={handleLogout}
-          className="text-red-600 hover:bg-red-50 focus:bg-red-50"
+          className="text-destructive hover:bg-destructive/10 focus:bg-destructive/10"
         >
           Sign Out
         </DropdownMenuItem>

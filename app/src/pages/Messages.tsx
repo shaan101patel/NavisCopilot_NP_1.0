@@ -239,13 +239,13 @@ export default function Notifications() {
           {/* Search and Filter */}
           <div className="space-y-3">
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search conversations..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground placeholder:text-muted-foreground"
               />
             </div>
             
@@ -274,18 +274,18 @@ export default function Notifications() {
               <div
                 key={conversation.id}
                 onClick={() => setSelectedConversation(conversation.id)}
-                className={`p-4 border-b border-gray-200 cursor-pointer hover:bg-muted/50 transition-colors ${
-                  selectedConversation === conversation.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                className={`p-4 border-b border-border cursor-pointer hover:bg-muted/50 transition-colors ${
+                  selectedConversation === conversation.id ? 'bg-accent border-l-4 border-l-primary' : ''
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <div className="font-medium text-sm">
+                      <div className="font-medium text-sm text-foreground">
                         {getConversationTitle(conversation)}
                       </div>
                       {conversation.type === 'group' && (
-                        <Users size={12} className="text-gray-500" />
+                        <Users size={12} className="text-muted-foreground" />
                       )}
                       {conversation.unreadCount > 0 && (
                         <div className="bg-blue-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
@@ -293,10 +293,10 @@ export default function Notifications() {
                         </div>
                       )}
                     </div>
-                    <div className="text-xs text-gray-600 mt-1 line-clamp-2">
+                    <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
                       {conversation.lastMessage?.content || 'No messages yet'}
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-muted-foreground mt-1">
                       {conversation.lastMessage?.timestamp.toLocaleTimeString()}
                     </div>
                   </div>
@@ -316,10 +316,10 @@ export default function Notifications() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div>
-                    <div className="font-semibold">
+                    <div className="font-semibold text-foreground">
                       {getConversationTitle(selectedConversationData)}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-muted-foreground">
                       {selectedConversationData.type === 'direct' ? (
                         <>
                           {selectedConversationData.participants
@@ -374,16 +374,16 @@ export default function Notifications() {
                     <div className={`max-w-[70%] p-3 rounded-lg ${
                       message.senderId === 'current-user'
                         ? 'bg-blue-500 text-white'
-                        : 'bg-gray-100 text-gray-900'
+                        : 'bg-muted text-foreground'
                     }`}>
                       {message.senderId !== 'current-user' && selectedConversationData.type === 'group' && (
-                        <div className="text-xs font-medium mb-1">
+                        <div className="text-xs font-medium mb-1 text-muted-foreground">
                           {mockUsers.find(u => u.id === message.senderId)?.name || 'Unknown'}
                         </div>
                       )}
                       <div className="break-words">{message.content}</div>
                       <div className={`text-xs mt-1 ${
-                        message.senderId === 'current-user' ? 'text-blue-100' : 'text-gray-500'
+                        message.senderId === 'current-user' ? 'text-blue-100' : 'text-muted-foreground'
                       }`}>
                         {message.timestamp.toLocaleTimeString()}
                       </div>
@@ -393,13 +393,13 @@ export default function Notifications() {
                 
                 {isTyping && (
                   <div className="flex justify-start">
-                    <div className="bg-gray-100 p-3 rounded-lg">
+                    <div className="bg-muted p-3 rounded-lg">
                       <div className="flex items-center gap-1">
-                        <span className="text-sm text-gray-600">Someone is typing</span>
+                        <span className="text-sm text-muted-foreground">Someone is typing</span>
                         <div className="flex gap-1">
-                          <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
-                          <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                          <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce"></div>
+                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                         </div>
                       </div>
                     </div>
@@ -418,7 +418,7 @@ export default function Notifications() {
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Type a message..."
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground placeholder:text-muted-foreground"
                   />
                   <Button
                     onClick={sendMessage}
@@ -433,9 +433,9 @@ export default function Notifications() {
           </>
         ) : (
           <Card className="flex-1 flex items-center justify-center">
-            <div className="text-center text-gray-500">
-              <MessageSquare size={48} className="mx-auto mb-4 text-gray-300" />
-              <h3 className="text-lg font-medium mb-2">Select a conversation</h3>
+            <div className="text-center text-muted-foreground">
+              <MessageSquare size={48} className="mx-auto mb-4 text-muted-foreground/50" />
+              <h3 className="text-lg font-medium mb-2 text-foreground">Select a conversation</h3>
               <p>Choose a conversation from the sidebar to start messaging</p>
             </div>
           </Card>
