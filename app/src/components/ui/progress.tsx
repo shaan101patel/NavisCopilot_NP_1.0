@@ -11,14 +11,14 @@ export function Progress({ value, max = 100, className, color = "default" }: Pro
   const percentage = Math.min((value / max) * 100, 100);
   
   const colorClasses = {
-    default: "bg-blue-500",
+    default: "bg-primary",
     success: "bg-green-500",
     warning: "bg-yellow-500",
     danger: "bg-red-500",
   };
 
   return (
-    <div className={clsx("w-full bg-gray-200 rounded-full h-2", className)}>
+    <div className={clsx("w-full bg-secondary rounded-full h-2", className)}>
       <div 
         className={clsx("h-2 rounded-full transition-all duration-300", colorClasses[color])}
         style={{ width: `${percentage}%` }}

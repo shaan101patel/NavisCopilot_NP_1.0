@@ -433,7 +433,7 @@ export default function LiveCall() {
     <div className="h-[calc(100vh-200px)]">
       {/* Header with Call Controls */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-heading">Live Call</h1>
+        <h1 className="text-3xl font-heading text-foreground">Live Call</h1>
         <Button 
           onClick={() => setShowCallControls(true)}
           variant="outline"
@@ -453,7 +453,7 @@ export default function LiveCall() {
               style={{ height: `${transcriptHeight}%` }}
             >
               <div className="p-4 border-b border-border">
-                <h2 className="text-xl font-semibold">Live Transcript</h2>
+                <h2 className="text-xl font-semibold text-card-foreground">Live Transcript</h2>
               </div>
               <div className="flex-1 overflow-y-auto p-4 bg-muted/30">
                 {/* IMPLEMENT LATER: Stream real-time transcript data here with WebSocket connection */}
@@ -467,11 +467,11 @@ export default function LiveCall() {
                         }`}>
                           {entry.speaker}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-muted-foreground">
                           {entry.timestamp.toLocaleTimeString()}
                         </span>
                       </div>
-                      <div className="bg-background rounded-lg p-3 shadow-sm relative">
+                      <div className="bg-card rounded-lg p-3 shadow-sm border border-border relative">
                         <div className="pr-8">
                           {entry.text}
                         </div>
@@ -479,14 +479,14 @@ export default function LiveCall() {
                         {/* Copy Button - always visible on mobile, appears on hover on desktop */}
                         <button
                           onClick={() => copyTranscriptToClipboard(entry.id, entry.text, entry.speaker, entry.timestamp)}
-                          className="absolute top-2 right-2 p-1.5 rounded-md bg-white/80 hover:bg-white shadow-sm border border-gray-200 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="absolute top-2 right-2 p-1.5 rounded-md bg-background/80 hover:bg-background border border-border shadow-sm opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
                           title={copiedTranscriptIds.has(entry.id) ? "Copied!" : "Copy transcript line"}
                           aria-label={`Copy transcript line: ${entry.text.substring(0, 50)}${entry.text.length > 50 ? '...' : ''}`}
                         >
                           {copiedTranscriptIds.has(entry.id) ? (
                             <Check size={14} className="text-green-600" />
                           ) : (
-                            <Copy size={14} className="text-gray-600 hover:text-gray-800" />
+                            <Copy size={14} className="text-muted-foreground hover:text-foreground" />
                           )}
                         </button>
                       </div>
@@ -510,7 +510,7 @@ export default function LiveCall() {
               style={{ height: `${100 - transcriptHeight}%` }}
             >
               <div className="p-4 border-b border-border flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Call Notes</h2>
+                <h2 className="text-xl font-semibold text-card-foreground">Call Notes</h2>
                 <div className="flex items-center gap-2">
                   {/* View Mode Toggle */}
                   <div className="flex border border-border rounded-md overflow-hidden">
@@ -654,11 +654,11 @@ export default function LiveCall() {
 
         {/* Right pane: AI Chat & Suggestions */}
         <Card className="p-6 flex flex-col gap-4 h-full">
-          <h2 className="text-xl font-semibold mb-2">AI Assistant & Chat</h2>
+          <h2 className="text-xl font-semibold mb-2 text-card-foreground">AI Assistant & Chat</h2>
           
           {/* Static AI Suggestions */}
           <div className="border-b border-border pb-4">
-            <h3 className="text-sm font-medium text-gray-600 mb-2">Quick Suggestions</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Quick Suggestions</h3>
             {/* IMPLEMENT LATER: Display dynamic RAG output based on call context and agent experience level */}
             {/* Expected AI features: real-time suggestions, context-aware responses, sentiment analysis */}
             <div className="space-y-2">
@@ -673,8 +673,8 @@ export default function LiveCall() {
           {/* Chat Interface */}
           <div className="flex-1 flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-gray-600">AI Chat</h3>
-              <div className="text-xs text-gray-500">
+              <h3 className="text-sm font-medium text-muted-foreground">AI Chat</h3>
+              <div className="text-xs text-muted-foreground">
                 Mode: <span className="capitalize font-medium text-primary">{aiResponseLevel}</span>
               </div>
             </div>
@@ -696,14 +696,13 @@ export default function LiveCall() {
                   >
                     <div
                       className={`max-w-[80%] p-3 rounded-lg text-sm ${
-                        message.sender === 'agent'
-                          ? 'bg-primary text-white rounded-br-sm'
-                          : 'bg-white border border-border rounded-bl-sm shadow-sm'
+                        message.sender === 'agent'                        ? 'bg-primary text-primary-foreground rounded-br-sm'
+                        : 'bg-card border border-border rounded-bl-sm shadow-sm'
                       }`}
                     >
                       <div className="break-words">{message.content}</div>
                       <div className={`text-xs mt-1 ${
-                        message.sender === 'agent' ? 'text-primary-foreground/70' : 'text-gray-500'
+                        message.sender === 'agent' ? 'text-primary-foreground/70' : 'text-muted-foreground'
                       }`}>
                         {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         {message.aiResponseLevel && (
@@ -717,13 +716,13 @@ export default function LiveCall() {
                 {/* AI Typing Indicator */}
                 {isAiTyping && (
                   <div className="flex justify-start">
-                    <div className="bg-white border border-border rounded-lg rounded-bl-sm shadow-sm p-3 text-sm">
+                    <div className="bg-card border border-border rounded-lg rounded-bl-sm shadow-sm p-3 text-sm">
                       <div className="flex items-center gap-1">
                         <span>AI is typing</span>
                         <div className="flex gap-1">
-                          <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                          <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                          <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                         </div>
                       </div>
                     </div>
@@ -741,7 +740,7 @@ export default function LiveCall() {
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Ask the AI assistant anything..."
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  className="w-full border border-input rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring/20 focus:border-ring bg-background"
                   rows={2}
                 />
               </div>
@@ -763,8 +762,8 @@ export default function LiveCall() {
                 
                 {/* Drop-up Menu */}
                 {showAiLevelDropup && (
-                  <div className="absolute bottom-full right-0 mb-2 bg-white border border-border rounded-lg shadow-lg py-2 min-w-32 z-50">
-                    <div className="px-3 py-1 text-xs font-medium text-gray-600 border-b border-border mb-1">
+                  <div className="absolute bottom-full right-0 mb-2 bg-popover border border-border rounded-lg shadow-lg py-2 min-w-32 z-50">
+                    <div className="px-3 py-1 text-xs font-medium text-muted-foreground border-b border-border mb-1">
                       AI Answer:
                     </div>
                     {(['instant', 'quick', 'immediate'] as AiResponseLevel[]).map((level) => (
@@ -774,8 +773,8 @@ export default function LiveCall() {
                           setAiResponseLevel(level);
                           setShowAiLevelDropup(false);
                         }}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors capitalize ${
-                          aiResponseLevel === level ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700'
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors capitalize ${
+                          aiResponseLevel === level ? 'bg-accent/50 text-accent-foreground font-medium' : 'text-popover-foreground'
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -824,11 +823,11 @@ export default function LiveCall() {
 
       {/* Call Control Modal */}
       {showCallControls && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-popover border border-border rounded-lg p-6 w-full max-w-md mx-4 shadow-xl">
             {/* Modal Header */}
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Call Controls</h2>
+              <h2 className="text-xl font-semibold text-popover-foreground">Call Controls</h2>
               <Button
                 variant="ghost"
                 size="sm"
@@ -840,12 +839,12 @@ export default function LiveCall() {
             </div>
 
             {/* Call Status */}
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="font-medium text-green-800">Call Active</span>
+                <span className="font-medium text-green-800 dark:text-green-400">Call Active</span>
               </div>
-              <div className="text-sm text-green-700">
+              <div className="text-sm text-green-700 dark:text-green-300">
                 Call Length: {callDuration}
               </div>
             </div>

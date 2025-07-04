@@ -78,7 +78,8 @@ function DropdownMenuContent({ children, className, align = "end" }: DropdownMen
     <div
       ref={contentRef}
       className={cn(
-        "absolute top-full mt-2 w-56 rounded-md border border-border bg-white shadow-lg z-50",
+        "absolute top-full mt-2 w-56 rounded-md border border-border bg-popover shadow-lg z-50",
+        "dark:bg-popover dark:border-border dark:shadow-dark-card",
         align === "end" ? "right-0" : "left-0",
         className
       )}
@@ -104,7 +105,9 @@ function DropdownMenuItem({ children, icon, className, onClick, ...props }: Drop
   return (
     <button
       className={cn(
-        "flex w-full items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none first:rounded-t-md last:rounded-b-md",
+        "flex w-full items-center gap-2 px-4 py-2 text-sm text-left text-popover-foreground",
+        "hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none",
+        "first:rounded-t-md last:rounded-b-md transition-colors",
         className
       )}
       onClick={handleClick}
@@ -117,7 +120,7 @@ function DropdownMenuItem({ children, icon, className, onClick, ...props }: Drop
 }
 
 function DropdownMenuSeparator() {
-  return <div className="my-1 h-px bg-gray-200" />
+  return <div className="my-1 h-px bg-border" />
 }
 
 export {

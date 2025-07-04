@@ -99,13 +99,13 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <h1 className="text-3xl font-heading mb-6">Agent Dashboard</h1>
+      <h1 className="text-3xl font-heading mb-6 text-foreground">Agent Dashboard</h1>
       
       {/* Call Button */}
       <div className="mb-8">
         <Button 
           onClick={handleStartCall}
-          className="bg-primary hover:bg-primary/90 text-white px-6 py-3 text-lg flex items-center gap-2"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 text-lg flex items-center gap-2"
         >
           <Phone size={20} />
           Start Call
@@ -115,7 +115,7 @@ export default function Dashboard() {
       {/* Recent Tickets Carousel */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-heading">Recent Tickets</h2>
+          <h2 className="text-2xl font-heading text-foreground">Recent Tickets</h2>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -140,17 +140,17 @@ export default function Dashboard() {
           {getVisibleTickets().map((ticket) => (
             <Card key={ticket.id} className="p-4 flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <div className="text-lg font-semibold">{ticket.customer}</div>
+                <div className="text-lg font-semibold text-card-foreground">{ticket.customer}</div>
                 <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  ticket.priority === 'urgent' ? 'bg-red-100 text-red-800' :
-                  ticket.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                  ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-green-100 text-green-800'
+                  ticket.priority === 'urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400' :
+                  ticket.priority === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400' :
+                  ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' :
+                  'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
                 }`}>
                   {ticket.priority}
                 </div>
               </div>
-              <div className="space-y-1 text-sm text-gray-600">
+              <div className="space-y-1 text-sm text-muted-foreground">
                 <div>ID: {ticket.id}</div>
                 <div>Status: {ticket.status}</div>
                 <div>Call: {ticket.callStatus}</div>
@@ -173,7 +173,7 @@ export default function Dashboard() {
       {/* Notifications Section */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-heading">Notifications</h2>
+          <h2 className="text-2xl font-heading text-foreground">Notifications</h2>
           <Button
             variant="outline"
             onClick={handleGoToMessages}
@@ -187,25 +187,25 @@ export default function Dashboard() {
         <Card className="p-6">
           <div className="space-y-4">
             {notifications.slice(0, 3).map((notification) => (
-              <div key={notification.id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+              <div key={notification.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                 <div className={`p-2 rounded-full ${
-                  notification.type === 'message' ? 'bg-blue-100' :
-                  notification.type === 'ticket_update' ? 'bg-green-100' :
-                  'bg-red-100'
+                  notification.type === 'message' ? 'bg-blue-100 dark:bg-blue-900/20' :
+                  notification.type === 'ticket_update' ? 'bg-green-100 dark:bg-green-900/20' :
+                  'bg-red-100 dark:bg-red-900/20'
                 }`}>
-                  {notification.type === 'message' ? <MessageSquare size={16} className="text-blue-600" /> :
-                   notification.type === 'ticket_update' ? <Users size={16} className="text-green-600" /> :
-                   <Bell size={16} className="text-red-600" />}
+                  {notification.type === 'message' ? <MessageSquare size={16} className="text-blue-600 dark:text-blue-400" /> :
+                   notification.type === 'ticket_update' ? <Users size={16} className="text-green-600 dark:text-green-400" /> :
+                   <Bell size={16} className="text-red-600 dark:text-red-400" />}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <div className="font-medium">{notification.title}</div>
+                    <div className="font-medium text-card-foreground">{notification.title}</div>
                     {!notification.isRead && (
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
                     )}
                   </div>
-                  <div className="text-sm text-gray-600 mt-1">{notification.content}</div>
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-sm text-muted-foreground mt-1">{notification.content}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
                     {notification.senderName && `From: ${notification.senderName} • `}
                     {notification.createdAt.toLocaleTimeString()}
                   </div>
