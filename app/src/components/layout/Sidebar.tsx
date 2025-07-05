@@ -1,6 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
 import { Home, Phone, Ticket, BarChart2, Settings, MessageSquare, FileText, TrendingUp } from "lucide-react";
 import clsx from "clsx";
+import { useTheme } from '../../hooks/useTheme';
+import NavisLogoLight from '../../assets/NavisLogo_LightMode-removebg-preview.png';
+import NavisLogoDark from '../../assets/NavisLogo_DarkMode-removebg-preview.png';
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: <Home size={20} /> },
@@ -19,6 +22,8 @@ interface SidebarProps {
 
 export function Sidebar({ isCollapsed }: SidebarProps) {
   const location = useLocation();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   
   return (
     <aside className={clsx(
@@ -27,7 +32,19 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
       isCollapsed ? "w-0" : "w-64"
     )}>
       <div className="flex items-center p-6 min-w-64">
-        <div className="text-2xl font-heading text-primary">Navis</div>
+        <div className="flex items-center">
+          <img 
+            src={isDark ? NavisLogoDark : NavisLogoLight} 
+            alt="Navis Logo" 
+            className="h-10 w-auto object-contain"
+            onError={(e) => {
+              console.error('Sidebar logo failed to load:', e.currentTarget.src);
+            }}
+            onLoad={() => {
+              console.log('Sidebar logo loaded successfully:', isDark ? 'Dark' : 'Light', 'Theme:', resolvedTheme);
+            }}
+          />
+        </div>
       </div>
       <nav className="flex-1 min-w-64 px-3">
         <ul className="space-y-1">

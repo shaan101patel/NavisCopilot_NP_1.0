@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import clsx from "clsx";
 import { 
   TrendingUp, 
@@ -32,9 +33,24 @@ import {
   Headphones,
   Mic,
   Heart,
-  Activity
+  Activity,
+  Search,
+  Filter,
+  X
 } from "lucide-react";
 import { useState } from "react";
+
+// Filter and search types
+type CallType = "All" | "Billing Issue" | "Technical Support" | "Product Inquiry" | "Account Update" | "Complaint";
+type ResolutionStatus = "All" | "Resolved" | "Escalated" | "Pending";
+type SentimentFilter = "All" | "Positive" | "Neutral" | "Negative";
+
+interface CallFilters {
+  type: CallType;
+  resolution: ResolutionStatus;
+  sentiment: SentimentFilter;
+  dateRange: string;
+}
 
 // IMPLEMENT LATER: Replace with real data from backend (Supabase).
 // Expected data structures:
@@ -330,6 +346,14 @@ const mockAgentData = {
 export default function AgentImprovement() {
   const [selectedCall, setSelectedCall] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState<CallFilters>({
+    type: "All",
+    resolution: "All",
+    sentiment: "All",
+    dateRange: "All"
+  });
+  const [showFilters, setShowFilters] = useState(false);
   
   // IMPLEMENT LATER: Fetch agent performance data, recommendations, and call details from backend (Supabase).
   const data = mockAgentData;
@@ -345,6 +369,55 @@ export default function AgentImprovement() {
     if (sentiment > 0) return "Neutral";
     return "Negative";
   };
+
+  const getSentimentFromNumber = (sentiment: number): SentimentFilter => {
+    if (sentiment > 0.5) return "Positive";
+    if (sentiment > 0) return "Neutral";
+    return "Negative";
+  };
+
+  // Filter and search logic
+  const filteredCalls = data.recentCalls.filter(call => {
+    // Search filter
+    const matchesSearch = searchTerm === "" || 
+      call.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      call.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      call.id.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Type filter
+    const matchesType = filters.type === "All" || call.type === filters.type;
+
+    // Resolution filter
+    const matchesResolution = filters.resolution === "All" || call.resolution === filters.resolution;
+
+    // Sentiment filter
+    const callSentiment = getSentimentFromNumber(call.sentiment);
+    const matchesSentiment = filters.sentiment === "All" || callSentiment === filters.sentiment;
+
+    // Date filter (simple implementation for demo)
+    const matchesDate = filters.dateRange === "All" || 
+      (filters.dateRange === "Today" && call.date === "2025-07-03") ||
+      (filters.dateRange === "Yesterday" && call.date === "2025-07-02") ||
+      (filters.dateRange === "This Week" && ["2025-07-03", "2025-07-02", "2025-07-01"].includes(call.date));
+
+    return matchesSearch && matchesType && matchesResolution && matchesSentiment && matchesDate;
+  });
+
+  const clearFilters = () => {
+    setFilters({
+      type: "All",
+      resolution: "All",
+      sentiment: "All",
+      dateRange: "All"
+    });
+    setSearchTerm("");
+  };
+
+  const hasActiveFilters = searchTerm !== "" || 
+    filters.type !== "All" || 
+    filters.resolution !== "All" || 
+    filters.sentiment !== "All" || 
+    filters.dateRange !== "All";
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -700,59 +773,217 @@ export default function AgentImprovement() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {data.recentCalls.map((call) => (
-                  <div 
-                    key={call.id}
-                    className={clsx(
-                      "p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md",
-                      selectedCall === call.id 
-                        ? "border-blue-500 bg-blue-50" 
-                        : "border-gray-200 hover:border-gray-300"
-                    )}
-                    onClick={() => setSelectedCall(call.id)}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Select call with ${call.customerName} on ${call.date}`}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        setSelectedCall(call.id);
-                      }
-                    }}
+              {/* Search and Filter Controls */}
+              <div className="space-y-4 mb-6">
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    placeholder="Search by customer name, call type, or call ID..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+
+                {/* Filter Controls */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant={showFilters ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center gap-2"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <h4 className="font-medium">{call.customerName}</h4>
-                          <Badge variant="default" className="text-xs">
-                            {call.type}
-                          </Badge>
-                          <span className={`px-2 py-1 rounded-full text-xs ${getSentimentColor(call.sentiment)}`}>
-                            {getSentimentLabel(call.sentiment)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                          <span>{call.date} at {call.time}</span>
-                          <span>{call.duration} min</span>
-                          <span>★ {call.satisfaction}</span>
-                          <span className={call.resolution === "Resolved" ? "text-green-600" : "text-orange-600"}>
-                            {call.resolution}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline">
-                          <Eye className="w-4 h-4 mr-1" />
-                          Analyze
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <PlayCircle className="w-4 h-4 mr-1" />
-                          Listen
-                        </Button>
-                      </div>
+                    <Filter className="w-4 h-4" />
+                    Filters
+                    {hasActiveFilters && (
+                      <Badge variant="default" className="ml-1 px-1 py-0 text-xs">
+                        {[searchTerm !== "" ? 1 : 0, 
+                          filters.type !== "All" ? 1 : 0,
+                          filters.resolution !== "All" ? 1 : 0,
+                          filters.sentiment !== "All" ? 1 : 0,
+                          filters.dateRange !== "All" ? 1 : 0].reduce((a, b) => a + b, 0)}
+                      </Badge>
+                    )}
+                  </Button>
+
+                  {hasActiveFilters && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearFilters}
+                      className="flex items-center gap-2 text-muted-foreground"
+                    >
+                      <X className="w-4 h-4" />
+                      Clear All
+                    </Button>
+                  )}
+
+                  <div className="text-sm text-muted-foreground">
+                    {filteredCalls.length} of {data.recentCalls.length} calls
+                  </div>
+                </div>
+
+                {/* Filter Options */}
+                {showFilters && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg border">
+                    {/* Call Type Filter */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Call Type</label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger>
+                          <Button variant="outline" className="w-full justify-between">
+                            {filters.type}
+                            <ChevronDown className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-full">
+                          {["All", "Billing Issue", "Technical Support", "Product Inquiry", "Account Update", "Complaint"].map((type) => (
+                            <DropdownMenuItem
+                              key={type}
+                              onClick={() => setFilters(prev => ({ ...prev, type: type as CallType }))}
+                            >
+                              {type}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    {/* Resolution Status Filter */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Resolution Status</label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger>
+                          <Button variant="outline" className="w-full justify-between">
+                            {filters.resolution}
+                            <ChevronDown className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-full">
+                          {["All", "Resolved", "Escalated", "Pending"].map((status) => (
+                            <DropdownMenuItem
+                              key={status}
+                              onClick={() => setFilters(prev => ({ ...prev, resolution: status as ResolutionStatus }))}
+                            >
+                              {status}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    {/* Sentiment Filter */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Customer Sentiment</label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger>
+                          <Button variant="outline" className="w-full justify-between">
+                            {filters.sentiment}
+                            <ChevronDown className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-full">
+                          {["All", "Positive", "Neutral", "Negative"].map((sentiment) => (
+                            <DropdownMenuItem
+                              key={sentiment}
+                              onClick={() => setFilters(prev => ({ ...prev, sentiment: sentiment as SentimentFilter }))}
+                            >
+                              {sentiment}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    {/* Date Range Filter */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Date Range</label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger>
+                          <Button variant="outline" className="w-full justify-between">
+                            {filters.dateRange}
+                            <ChevronDown className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-full">
+                          {["All", "Today", "Yesterday", "This Week", "Last Week"].map((range) => (
+                            <DropdownMenuItem
+                              key={range}
+                              onClick={() => setFilters(prev => ({ ...prev, dateRange: range }))}
+                            >
+                              {range}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
-                ))}
+                )}
+              </div>
+
+              {/* Call List */}
+              <div className="space-y-3">
+                {filteredCalls.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Phone className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium">No calls found</p>
+                    <p className="text-sm">Try adjusting your search terms or filters</p>
+                  </div>
+                ) : (
+                  filteredCalls.map((call) => (
+                    <div 
+                      key={call.id}
+                      className={clsx(
+                        "p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md",
+                        selectedCall === call.id 
+                          ? "border-blue-500 bg-blue-50" 
+                          : "border-gray-200 hover:border-gray-300"
+                      )}
+                      onClick={() => setSelectedCall(call.id)}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Select call with ${call.customerName} on ${call.date}`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          setSelectedCall(call.id);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3">
+                            <h4 className="font-medium">{call.customerName}</h4>
+                            <Badge variant="default" className="text-xs">
+                              {call.type}
+                            </Badge>
+                            <span className={`px-2 py-1 rounded-full text-xs ${getSentimentColor(call.sentiment)}`}>
+                              {getSentimentLabel(call.sentiment)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                            <span>{call.date} at {call.time}</span>
+                            <span>{call.duration} min</span>
+                            <span>★ {call.satisfaction}</span>
+                            <span className={call.resolution === "Resolved" ? "text-green-600" : "text-orange-600"}>
+                              {call.resolution}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline">
+                            <Eye className="w-4 h-4 mr-1" />
+                            Analyze
+                          </Button>
+                          <Button size="sm" variant="outline">
+                            <PlayCircle className="w-4 h-4 mr-1" />
+                            Listen
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
