@@ -1,12 +1,10 @@
 import { UserProfile } from '../UserProfile';
 import { ThemeToggle } from '../ThemeToggle';
+import { LogoDisplay } from '../LogoDisplay';
 import { Menu, X, Search, ArrowRight } from 'lucide-react';
-import { useTheme } from '../../hooks/useTheme';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/input';
-import NavisLogoLight from '../../assets/NavisLogo_LightMode-removebg-preview.png';
-import NavisLogoDark from '../../assets/NavisLogo_DarkMode-removebg-preview.png';
 
 import { Home, Phone, Ticket, BarChart2, Settings, MessageSquare, FileText, TrendingUp } from 'lucide-react';
 
@@ -28,8 +26,6 @@ interface HeaderProps {
 }
 
 export function Header({ isSidebarCollapsed, onToggleSidebar }: HeaderProps) {
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -134,17 +130,7 @@ export function Header({ isSidebarCollapsed, onToggleSidebar }: HeaderProps) {
           {isSidebarCollapsed ? <Menu size={20} /> : <X size={20} />}
         </button>
         <div className="flex items-center">
-          <img 
-            src={isDark ? NavisLogoDark : NavisLogoLight} 
-            alt="Navis Logo" 
-            className="h-8 w-auto object-contain"
-            onError={(e) => {
-              console.error('Logo failed to load:', e.currentTarget.src);
-            }}
-            onLoad={() => {
-              console.log('Logo loaded successfully:', isDark ? 'Dark' : 'Light', 'Theme:', resolvedTheme);
-            }}
-          />
+          <LogoDisplay />
         </div>
         
         {/* Search Bar */}

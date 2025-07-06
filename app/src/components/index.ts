@@ -3,6 +3,7 @@ export { default as HelloNavis } from './HelloNavis';
 export { default as ReduxExample } from './ReduxExample';
 export { UserProfile } from './UserProfile';
 export { ThemeToggle } from './ThemeToggle';
+export { LogoDisplay } from './LogoDisplay';
 
 // Additional components will be exported here:
 // export { default as Button } from './Button';

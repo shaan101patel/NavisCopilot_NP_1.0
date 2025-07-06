@@ -1,7 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useState, useRef, useCallback, useEffect } from "react";
-import { GripHorizontal, Plus, Edit3, Trash2, List, StickyNote, Send, Settings, ChevronUp, Phone, PhoneCall, PhoneOff, Users, Search, Copy, Check } from "lucide-react";
+import { GripHorizontal, Plus, Edit3, Trash2, List, StickyNote, Send, Settings, ChevronUp, Phone, PhoneCall, PhoneOff, Users, Search, Copy, Check, Monitor, Share, Ticket, X, AlertCircle } from "lucide-react";
 
 // IMPLEMENT LATER: Replace with real-time call and transcript data from backend (Supabase).
 // Expected data: 
@@ -90,6 +91,25 @@ export default function LiveCall() {
   
   // Copy functionality state for transcript entries
   const [copiedTranscriptIds, setCopiedTranscriptIds] = useState<Set<string>>(new Set());
+  
+  // Screen sharing state
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+  const [screenShareError, setScreenShareError] = useState<string | null>(null);
+  
+  // Create ticket modal state
+  const [showCreateTicketModal, setShowCreateTicketModal] = useState(false);
+  const [ticketForm, setTicketForm] = useState({
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
+    issueTitle: '',
+    issueDescription: '',
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
+    category: 'general' as 'general' | 'technical' | 'billing' | 'account' | 'other',
+    callId: '',
+    agentNotes: ''
+  });
   
   // IMPLEMENT LATER: Replace with real agent data from backend user management system
   // Expected data structure:
@@ -429,20 +449,315 @@ export default function LiveCall() {
     }
   };
 
+  // Screen sharing functionality
+  const startScreenShare = async () => {
+    try {
+      setScreenShareError(null);
+      
+      // BROWSER COMPATIBILITY: Screen sharing requires:
+      // - HTTPS (except localhost for development)
+      // - Modern browsers (Chrome 72+, Firefox 66+, Safari 13+, Edge 79+)
+      // - Desktop/laptop browsers (mobile browsers have limited support)
+      // - User permission granted via browser prompt
+      
+      // Check if screen sharing is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        throw new Error('Screen sharing is not supported in this browser. Please use a modern desktop browser with HTTPS.');
+      }
+
+      // Request screen sharing with audio capture
+      // FEATURE: Capture both video and audio from shared screen/tab
+      // PURPOSE: Allows Navis to monitor and transcribe audio from other applications
+      // - Customer service representatives can share customer support tools
+      // - Audio from other tabs/applications can be captured and analyzed
+      // - Screen content can be analyzed for context and assistance
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          width: { ideal: 1920, max: 1920 },
+          height: { ideal: 1080, max: 1080 },
+          frameRate: { ideal: 30, max: 60 }
+        },
+        audio: {
+          // IMPORTANT: Audio capture from other tabs/applications
+          // This allows capturing audio from shared browser tabs or applications
+          // Browser support varies - some browsers prompt user to select audio source
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100
+        }
+      } as any); // Note: getDisplayMedia has different constraints than getUserMedia
+
+      setScreenStream(stream);
+      setIsScreenSharing(true);
+
+      // IMPLEMENT LATER: Send screen stream to Navis backend for processing
+      // Expected backend integration:
+      // 1. WebRTC connection to stream video/audio to backend servers
+      // 2. Real-time video analysis for context awareness
+      // 3. Audio transcription from shared applications/tabs
+      // 4. Screen content OCR for text extraction and analysis
+      // 5. AI monitoring for relevant information detection
+      // 
+      // Backend API endpoints needed:
+      // - POST /api/screen-share/start - Initialize screen sharing session
+      // - WebSocket /ws/screen-share/{sessionId} - Stream video/audio data
+      // - POST /api/screen-share/stop - End screen sharing session
+      // 
+      // Data structure:
+      // {
+      //   sessionId: string,
+      //   callId: string,
+      //   agentId: string,
+      //   streamType: 'screen' | 'application' | 'browser',
+      //   hasAudio: boolean,
+      //   resolution: { width: number, height: number },
+      //   startedAt: Date
+      // }
+
+      // Listen for when user stops sharing (e.g., clicking "Stop sharing" in browser)
+      stream.getVideoTracks()[0].addEventListener('ended', () => {
+        stopScreenShare();
+      });
+
+      console.log('Screen sharing started successfully');
+      console.log('Stream details:', {
+        hasVideo: stream.getVideoTracks().length > 0,
+        hasAudio: stream.getAudioTracks().length > 0,
+        videoSettings: stream.getVideoTracks()[0]?.getSettings(),
+        audioSettings: stream.getAudioTracks()[0]?.getSettings()
+      });
+
+    } catch (error) {
+      console.error('Failed to start screen sharing:', error);
+      
+      let errorMessage = 'Failed to start screen sharing.';
+      
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          errorMessage = 'Screen sharing permission denied. Please allow screen sharing and try again.';
+        } else if (error.name === 'NotSupportedError') {
+          errorMessage = 'Screen sharing is not supported in this browser. Please use Chrome, Firefox, or Edge.';
+        } else if (error.name === 'NotFoundError') {
+          errorMessage = 'No screen sharing source available. Please try again.';
+        } else if (error.name === 'AbortError') {
+          errorMessage = 'Screen sharing was cancelled by user.';
+        } else {
+          errorMessage = error.message || 'An unknown error occurred while starting screen sharing.';
+        }
+      }
+      
+      setScreenShareError(errorMessage);
+      setIsScreenSharing(false);
+      setScreenStream(null);
+    }
+  };
+
+  const stopScreenShare = () => {
+    if (screenStream) {
+      // Stop all tracks in the stream
+      screenStream.getTracks().forEach(track => {
+        track.stop();
+      });
+      
+      // IMPLEMENT LATER: Notify backend that screen sharing has stopped
+      // Expected API call:
+      // - POST /api/screen-share/stop
+      // - Payload: { sessionId: string, endedAt: Date, duration: number }
+      // - Cleanup: Remove stream references, update call status, save session data
+      
+      setScreenStream(null);
+    }
+    
+    setIsScreenSharing(false);
+    setScreenShareError(null);
+    console.log('Screen sharing stopped');
+  };
+
+  // Cleanup screen sharing on component unmount
+  useEffect(() => {
+    return () => {
+      if (screenStream) {
+        screenStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [screenStream]);
+
+  // Create ticket functionality
+  const handleCreateTicket = () => {
+    setShowCreateTicketModal(true);
+    
+    // Pre-populate form with call information
+    setTicketForm(prev => ({
+      ...prev,
+      callId: `CALL-${Date.now()}`, // Mock call ID
+      customerName: 'Customer from current call', // IMPLEMENT LATER: Get from call data
+      customerPhone: '+1 (555) 123-4567', // IMPLEMENT LATER: Get from call data
+    }));
+  };
+
+  const handleTicketFormChange = (field: keyof typeof ticketForm, value: string) => {
+    setTicketForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleTicketSubmit = () => {
+    // IMPLEMENT LATER: Submit ticket to backend
+    // Expected API call:
+    // - POST /api/tickets
+    // - Payload: TicketCreateRequest
+    // - Response: { ticketId: string, status: 'created', createdAt: Date }
+    // 
+    // Backend integration requirements:
+    // 1. Ticket validation (required fields, format validation)
+    // 2. Customer lookup/creation if new customer
+    // 3. Call association (link ticket to current call)
+    // 4. Agent assignment rules (auto-assign or manual)
+    // 5. Priority-based routing and escalation rules
+    // 6. Email notifications to customer and relevant teams
+    // 7. Integration with CRM/helpdesk systems
+    // 8. Audit trail and ticket history logging
+    // 
+    // Expected data structure:
+    // interface TicketCreateRequest {
+    //   customerId?: string;           // Optional if existing customer
+    //   customerInfo: {
+    //     name: string;
+    //     email?: string;
+    //     phone?: string;
+    //   };
+    //   issue: {
+    //     title: string;
+    //     description: string;
+    //     category: TicketCategory;
+    //     priority: TicketPriority;
+    //   };
+    //   callInfo?: {
+    //     callId: string;
+    //     agentId: string;
+    //     callDuration: number;
+    //     callTranscript?: string;
+    //   };
+    //   agentNotes?: string;
+    //   attachments?: File[];          // Future: file upload support
+    //   tags?: string[];               // Future: tagging system
+    // }
+    // 
+    // Validation requirements:
+    // - Customer name: required, 2-100 characters
+    // - Issue title: required, 5-200 characters
+    // - Issue description: required, 10-2000 characters
+    // - Email: valid email format if provided
+    // - Phone: valid phone number format if provided
+    // - Priority: must be valid enum value
+    // - Category: must be valid enum value
+
+    console.log('Creating ticket with data:', ticketForm);
+    
+    // Mock success behavior
+    alert('Ticket created successfully! (This is a mock - no backend integration yet)');
+    setShowCreateTicketModal(false);
+    
+    // Reset form
+    setTicketForm({
+      customerName: '',
+      customerEmail: '',
+      customerPhone: '',
+      issueTitle: '',
+      issueDescription: '',
+      priority: 'medium',
+      category: 'general',
+      callId: '',
+      agentNotes: ''
+    });
+  };
+
+  const closeTicketModal = () => {
+    setShowCreateTicketModal(false);
+    // Don't reset form data in case user wants to reopen and continue
+  };
+
   return (
     <div className="h-[calc(100vh-200px)]">
       {/* Header with Call Controls */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-heading text-foreground">Live Call</h1>
-        <Button 
-          onClick={() => setShowCallControls(true)}
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          <Settings size={18} />
-          Call Controls
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Screen Share Button */}
+          <Button 
+            onClick={isScreenSharing ? stopScreenShare : startScreenShare}
+            variant={isScreenSharing ? "destructive" : "outline"}
+            className="flex items-center gap-2"
+            aria-label={isScreenSharing ? "Stop screen sharing" : "Start screen sharing"}
+            title={isScreenSharing ? "Stop sharing your screen" : "Share your screen with Navis"}
+          >
+            {isScreenSharing ? (
+              <>
+                <Monitor size={18} className="text-white" />
+                Stop Sharing
+              </>
+            ) : (
+              <>
+                <Share size={18} />
+                Share Screen
+              </>
+            )}
+          </Button>
+
+          {/* Create Ticket Button */}
+          <Button 
+            onClick={handleCreateTicket}
+            variant="outline"
+            className="flex items-center gap-2"
+            aria-label="Create a new support ticket"
+            title="Create a new support ticket for this call"
+          >
+            <Ticket size={18} />
+            Create Ticket
+          </Button>
+
+          {/* Call Controls Button */}
+          <Button 
+            onClick={() => setShowCallControls(true)}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Settings size={18} />
+            Call Controls
+          </Button>
+        </div>
       </div>
+
+      {/* Screen Sharing Status Indicator */}
+      {isScreenSharing && (
+        <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="font-medium text-green-800 dark:text-green-400">
+              Screen sharing is active
+            </span>
+            <span className="text-sm text-green-700 dark:text-green-300 ml-2">
+              - Navis can see your shared screen and hear audio
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Screen Sharing Error */}
+      {screenShareError && (
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={16} className="text-red-600 dark:text-red-400" />
+            <span className="font-medium text-red-800 dark:text-red-400">
+              Screen sharing error:
+            </span>
+            <span className="text-sm text-red-700 dark:text-red-300">
+              {screenShareError}
+            </span>
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
         {/* Left pane: Transcript and Notes with draggable divider */}
         <div className="flex flex-col h-full">
@@ -561,9 +876,6 @@ export default function LiveCall() {
                           note.color === 'green' ? 'bg-green-200 dark:bg-green-800/40 dark:text-green-100' :
                           'bg-pink-200 dark:bg-pink-800/40 dark:text-pink-100'
                         }`}
-                        style={{
-                          transform: `rotate(${Math.random() * 4 - 2}deg)`,
-                        }}
                       >
                         <textarea
                           className="w-full bg-transparent border-none resize-none text-sm placeholder-gray-600 dark:placeholder-gray-400 focus:outline-none"
@@ -807,6 +1119,206 @@ export default function LiveCall() {
           </div>
         </Card>
       </div>
+
+      {/* Create Ticket Modal */}
+      {showCreateTicketModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background border border-border rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-border">
+              <h2 className="text-xl font-semibold text-foreground">Create Support Ticket</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={closeTicketModal}
+                className="h-8 w-8 p-0"
+                aria-label="Close create ticket modal"
+              >
+                <X size={16} />
+              </Button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-6">
+              {/* Customer Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-foreground">Customer Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="customer-name" className="block text-sm font-medium text-foreground mb-1">
+                      Customer Name *
+                    </label>
+                    <Input
+                      id="customer-name"
+                      type="text"
+                      value={ticketForm.customerName}
+                      onChange={(e) => handleTicketFormChange('customerName', e.target.value)}
+                      placeholder="Enter customer's full name"
+                      required
+                      aria-describedby="customer-name-help"
+                    />
+                    <p id="customer-name-help" className="text-xs text-muted-foreground mt-1">
+                      Required field
+                    </p>
+                  </div>
+                  <div>
+                    <label htmlFor="customer-email" className="block text-sm font-medium text-foreground mb-1">
+                      Email Address
+                    </label>
+                    <Input
+                      id="customer-email"
+                      type="email"
+                      value={ticketForm.customerEmail}
+                      onChange={(e) => handleTicketFormChange('customerEmail', e.target.value)}
+                      placeholder="customer@example.com"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="customer-phone" className="block text-sm font-medium text-foreground mb-1">
+                      Phone Number
+                    </label>
+                    <Input
+                      id="customer-phone"
+                      type="tel"
+                      value={ticketForm.customerPhone}
+                      onChange={(e) => handleTicketFormChange('customerPhone', e.target.value)}
+                      placeholder="+1 (555) 123-4567"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="call-id" className="block text-sm font-medium text-foreground mb-1">
+                      Call ID
+                    </label>
+                    <Input
+                      id="call-id"
+                      type="text"
+                      value={ticketForm.callId}
+                      onChange={(e) => handleTicketFormChange('callId', e.target.value)}
+                      placeholder="Auto-generated from current call"
+                      className="bg-muted"
+                      readOnly
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Issue Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-foreground">Issue Details</h3>
+                <div>
+                  <label htmlFor="issue-title" className="block text-sm font-medium text-foreground mb-1">
+                    Issue Title *
+                  </label>
+                  <Input
+                    id="issue-title"
+                    type="text"
+                    value={ticketForm.issueTitle}
+                    onChange={(e) => handleTicketFormChange('issueTitle', e.target.value)}
+                    placeholder="Brief summary of the customer's issue"
+                    required
+                    aria-describedby="issue-title-help"
+                  />
+                  <p id="issue-title-help" className="text-xs text-muted-foreground mt-1">
+                    Required - Keep it concise and descriptive
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="priority" className="block text-sm font-medium text-foreground mb-1">
+                      Priority *
+                    </label>
+                    <select
+                      id="priority"
+                      value={ticketForm.priority}
+                      onChange={(e) => handleTicketFormChange('priority', e.target.value)}
+                      className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
+                      required
+                    >
+                      <option value="low">Low - General inquiry</option>
+                      <option value="medium">Medium - Standard issue</option>
+                      <option value="high">High - Urgent issue</option>
+                      <option value="urgent">Urgent - Critical problem</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="category" className="block text-sm font-medium text-foreground mb-1">
+                      Category *
+                    </label>
+                    <select
+                      id="category"
+                      value={ticketForm.category}
+                      onChange={(e) => handleTicketFormChange('category', e.target.value)}
+                      className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
+                      required
+                    >
+                      <option value="general">General Support</option>
+                      <option value="technical">Technical Issue</option>
+                      <option value="billing">Billing & Payment</option>
+                      <option value="account">Account Management</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="issue-description" className="block text-sm font-medium text-foreground mb-1">
+                    Issue Description *
+                  </label>
+                  <textarea
+                    id="issue-description"
+                    value={ticketForm.issueDescription}
+                    onChange={(e) => handleTicketFormChange('issueDescription', e.target.value)}
+                    placeholder="Detailed description of the issue, including steps to reproduce, error messages, and any relevant context from the call..."
+                    rows={4}
+                    required
+                    aria-describedby="issue-description-help"
+                    className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring resize-vertical"
+                  />
+                  <p id="issue-description-help" className="text-xs text-muted-foreground mt-1">
+                    Required - Provide as much detail as possible to help resolve the issue quickly
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="agent-notes" className="block text-sm font-medium text-foreground mb-1">
+                    Agent Notes
+                  </label>
+                  <textarea
+                    id="agent-notes"
+                    value={ticketForm.agentNotes}
+                    onChange={(e) => handleTicketFormChange('agentNotes', e.target.value)}
+                    placeholder="Internal notes for other agents or follow-up actions..."
+                    rows={3}
+                    className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring resize-vertical"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Internal notes - not visible to customer
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-border">
+              <Button
+                variant="ghost"
+                onClick={closeTicketModal}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleTicketSubmit}
+                disabled={!ticketForm.customerName || !ticketForm.issueTitle || !ticketForm.issueDescription}
+                className="flex items-center gap-2"
+              >
+                <Plus size={16} />
+                Create Ticket
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Call Control Modal */}
       {showCallControls && (
