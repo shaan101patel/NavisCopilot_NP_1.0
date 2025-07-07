@@ -11,6 +11,7 @@ import Messages from "@/pages/Messages";
 import Documents from "@/pages/Documents";
 import Profile from "@/pages/Profile";
 import Settings from "@/pages/Settings";
+import Feedback from "@/pages/Feedback";
 
 function App() {
   // Initialize user data on app startup
@@ -30,6 +31,7 @@ function App() {
           <Route path="/documents" element={<Documents />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/feedback" element={<Feedback />} />
         </Routes>
       </MainLayout>
     </Router>

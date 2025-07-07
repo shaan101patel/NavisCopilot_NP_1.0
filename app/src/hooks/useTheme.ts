@@ -14,6 +14,7 @@ export function useTheme() {
   });
 
   const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">("light");
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Function to apply theme to the DOM
   const applyTheme = (theme: "dark" | "light") => {
@@ -37,6 +38,11 @@ export function useTheme() {
   const setThemeAndPersist = (newTheme: Theme) => {
     setTheme(newTheme);
     localStorage.setItem("navis-theme", newTheme);
+    
+    // Only refresh the page if the hook has been initialized (not on initial load)
+    if (isInitialized) {
+      window.location.reload();
+    }
   };
 
   // Toggle between light and dark themes
@@ -84,6 +90,9 @@ export function useTheme() {
       const systemTheme = getSystemTheme();
       applyTheme(systemTheme);
     }
+    
+    // Mark as initialized after initial setup
+    setIsInitialized(true);
   }, []);
 
   return {

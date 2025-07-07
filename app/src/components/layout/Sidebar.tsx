@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Phone, Ticket, BarChart2, Settings, MessageSquare, FileText, TrendingUp } from "lucide-react";
+import { Home, Phone, Ticket, BarChart2, Settings, MessageSquare, FileText, TrendingUp, MessageCircle } from "lucide-react";
 import clsx from "clsx";
 import { useTheme } from '../../hooks/useTheme';
 import NavisLogoLight from '../../assets/NavisLogo_LightMode-removebg-preview.png';
@@ -46,26 +46,48 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
           />
         </div>
       </div>
-      <nav className="flex-1 min-w-64 px-3">
-        <ul className="space-y-1">
-          {navItems.map((item) => (
-            <li key={item.to}>
-              <Link
-                to={item.to}
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
-                  "hover:bg-accent hover:text-accent-foreground",
-                  location.pathname === item.to 
-                    ? "bg-accent text-accent-foreground font-medium" 
-                    : "text-muted-foreground"
-                )}
-              >
-                {item.icon}
-                {item.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
+      <nav className="flex-1 min-w-64 px-3 flex flex-col">
+        <div className="flex-1">
+          <ul className="space-y-1">
+            {navItems.map((item) => (
+              <li key={item.to}>
+                <Link
+                  to={item.to}
+                  className={clsx(
+                    "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+                    "hover:bg-accent hover:text-accent-foreground",
+                    location.pathname === item.to 
+                      ? "bg-accent text-accent-foreground font-medium" 
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {item.icon}
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+        
+        {/* Feedback link positioned at bottom */}
+        <div className="mt-auto pb-3">
+          <div className="border-t border-border pt-3">
+            <Link
+              to="/feedback"
+              className={clsx(
+                "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+                "hover:bg-accent hover:text-accent-foreground",
+                location.pathname === "/feedback" 
+                  ? "bg-accent text-accent-foreground font-medium" 
+                  : "text-muted-foreground"
+              )}
+              aria-label="Provide feedback"
+            >
+              <MessageCircle size={20} />
+              Feedback
+            </Link>
+          </div>
+        </div>
       </nav>
     </aside>
   );

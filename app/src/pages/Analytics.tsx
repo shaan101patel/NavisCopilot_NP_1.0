@@ -278,6 +278,24 @@ export default function Analytics() {
   // IMPLEMENT LATER: Fetch analytics and performance data from backend (Supabase).
   const data = mockAnalyticsData;
 
+  // Calculate averages for today's performance comparison
+  const calculateAverages = () => {
+    // Calculate team averages from time series data for comparison
+    const totalCallsAvg = mockTimeSeriesData.totalCalls.reduce((sum, d) => sum + (d.teamAverage || 0), 0) / mockTimeSeriesData.totalCalls.length;
+    const callDurationAvg = mockTimeSeriesData.callDuration.reduce((sum, d) => sum + (d.teamAverage || 0), 0) / mockTimeSeriesData.callDuration.length;
+    const satisfactionAvg = mockTimeSeriesData.satisfaction.reduce((sum, d) => sum + (d.teamAverage || 0), 0) / mockTimeSeriesData.satisfaction.length;
+    const resolutionAvg = mockTimeSeriesData.resolutionScore.reduce((sum, d) => sum + (d.teamAverage || 0), 0) / mockTimeSeriesData.resolutionScore.length;
+    
+    return {
+      totalCalls: Math.round(totalCallsAvg),
+      callDuration: Math.round(callDurationAvg * 10) / 10,
+      satisfaction: Math.round(satisfactionAvg * 10) / 10,
+      resolution: Math.round(resolutionAvg)
+    };
+  };
+
+  const averages = calculateAverages();
+
   const exportData = () => {
     // IMPLEMENT LATER: Export analytics data to CSV/Excel
     // Expected functionality:
@@ -953,29 +971,29 @@ export default function Analytics() {
                 "Calls Today",
                 23,
                 <Phone className="w-6 h-6 text-blue-500" />,
-                8,
-                "vs yesterday"
+                Math.round(((23 - averages.totalCalls) / averages.totalCalls) * 100),
+                "vs team average"
               )}
               {renderMetricCard(
                 "Avg Call Duration",
                 "4.1m",
                 <Clock className="w-6 h-6 text-green-500" />,
-                -5,
-                "vs yesterday"
+                Math.round(((4.1 - averages.callDuration) / averages.callDuration) * 100),
+                "vs team average"
               )}
               {renderMetricCard(
                 "Customer Satisfaction",
                 "4.7",
                 <ThumbsUp className="w-6 h-6 text-purple-500" />,
-                12,
-                "vs yesterday"
+                Math.round(((4.7 - averages.satisfaction) / averages.satisfaction) * 100),
+                "vs team average"
               )}
               {renderMetricCard(
                 "Tickets Resolved",
                 18,
                 <Target className="w-6 h-6 text-orange-500" />,
-                15,
-                "vs yesterday"
+                Math.round(((18 - averages.resolution) / averages.resolution) * 100),
+                "vs team average"
               )}
             </div>
           </Card>
