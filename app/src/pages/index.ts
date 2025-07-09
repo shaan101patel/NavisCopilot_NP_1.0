@@ -1,4 +1,5 @@
 // Export all pages from this directory
+export { default as Login } from './Login';
 export { default as Dashboard } from './Dashboard';
 export { default as LiveCall } from './LiveCall';
 export { default as Tickets } from './Tickets';

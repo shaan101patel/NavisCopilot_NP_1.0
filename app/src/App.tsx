@@ -1,12 +1,12 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useInitializeUser } from "@/hooks";
+import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import LiveCall from "@/pages/LiveCall";
 import Tickets from "@/pages/Tickets";
 import Analytics from "@/pages/Analytics";
 import AgentImprovement from "@/pages/AgentImprovement";
-import Admin from "@/pages/Admin";
 import Messages from "@/pages/Messages";
 import Documents from "@/pages/Documents";
 import Profile from "@/pages/Profile";
@@ -19,21 +19,92 @@ function App() {
 
   return (
     <Router>
-      <MainLayout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/live-call" element={<LiveCall />} />
-          <Route path="/tickets" element={<Tickets />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/agent-improvement" element={<AgentImprovement />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/messages" element={<Messages />} />
-          <Route path="/documents" element={<Documents />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/feedback" element={<Feedback />} />
-        </Routes>
-      </MainLayout>
+      <Routes>
+        {/* Login Page - Main Entry Point */}
+        <Route path="/" element={<Login />} />
+        
+        {/* Protected Routes with MainLayout */}
+        <Route
+          path="/dashboard"
+          element={
+            <MainLayout>
+              <Dashboard />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/live-call"
+          element={
+            <MainLayout>
+              <LiveCall />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/tickets"
+          element={
+            <MainLayout>
+              <Tickets />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            <MainLayout>
+              <Analytics />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/agent-improvement"
+          element={
+            <MainLayout>
+              <AgentImprovement />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/messages"
+          element={
+            <MainLayout>
+              <Messages />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/documents"
+          element={
+            <MainLayout>
+              <Documents />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <MainLayout>
+              <Profile />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <MainLayout>
+              <Settings />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/feedback"
+          element={
+            <MainLayout>
+              <Feedback />
+            </MainLayout>
+          }
+        />
+      </Routes>
     </Router>
   );
 }

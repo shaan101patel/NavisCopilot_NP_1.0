@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useRef, useCallback, useEffect } from "react";
-import { GripHorizontal, Plus, Edit3, Trash2, List, StickyNote, Send, Settings, ChevronUp, Phone, PhoneCall, PhoneOff, Users, Search, Copy, Check, Monitor, Share, Ticket, X, AlertCircle } from "lucide-react";
+import { GripHorizontal, Plus, Edit3, Trash2, List, StickyNote, Send, Settings, ChevronUp, Phone, PhoneCall, PhoneOff, Users, Search, Copy, Check, Monitor, Share, Ticket, X, AlertCircle, Zap, Info } from "lucide-react";
 
 // IMPLEMENT LATER: Replace with real-time call and transcript data from backend (Supabase).
 // Expected data: 
@@ -19,27 +19,42 @@ const mockTranscript = [
 ];
 
 // IMPLEMENT LATER: Replace with real AI suggestions from backend RAG system.
-// Expected data:
-// - suggestions: Array<{ id: string, text: string, priority: 'high' | 'medium' | 'low', category: string }>
-// - scriptMode: 'newbie' | 'intermediate' | 'experienced'
-// - contextualHelp: string (based on current conversation context)
-const mockAISuggestions = [
-  "Ask for the customer's order number.",
-  "Offer to check the order status in the system.",
-  "Provide order tracking information.",
-];
-
-// IMPLEMENT LATER: Replace with real notes data from backend (Supabase).
-// Expected data:
-// - notes: Array<{ id: string, content: string, createdAt: Date, updatedAt: Date, color?: string }>
-// - Auto-save functionality every few seconds
-// - Real-time collaboration if multiple agents are involved
-const mockNotes = [
-  { id: "note-1", content: "Customer mentioned previous issue with shipping", createdAt: new Date(), color: "yellow" },
-  { id: "note-2", content: "Check order status in system", createdAt: new Date(), color: "blue" },
-  { id: "note-3", content: "Customer prefers email updates over phone calls", createdAt: new Date(), color: "green" },
-  { id: "note-4", content: "Follow up needed within 24 hours", createdAt: new Date(), color: "pink" },
-];
+// Expected data structure for quick suggestion:
+// interface QuickSuggestion {
+//   id: string;
+//   message: string;
+//   context: 'customer_question' | 'manual_trigger' | 'call_event';
+//   confidence: number;
+//   timestamp: Date;
+//   callId: string;
+//   triggerData?: {
+//     customerMessage?: string;
+//     conversationContext?: string;
+//     customerSentiment?: 'positive' | 'neutral' | 'negative';
+//   };
+// }
+// 
+// Automatic generation triggers:
+// - Customer asks a question (detected via transcript analysis)
+// - Customer expresses frustration or confusion
+// - Long pause in conversation
+// - Agent requests help via chat
+// 
+// Backend integration:
+// - POST /api/ai/quick-suggestion/generate
+// - WebSocket event: 'customer-question-detected'
+// - Real-time transcript analysis for trigger detection
+const mockQuickSuggestion = "Ask for the customer's order number to help track their shipment status.";  // IMPLEMENT LATER: Replace with real notes data from backend (Supabase).
+  // Expected data:
+  // - notes: Array<{ id: string, content: string, createdAt: Date, updatedAt: Date, color?: string }>
+  // - Auto-save functionality every few seconds
+  // - Real-time collaboration if multiple agents are involved
+  const mockNotes = [
+    { id: "note-1", content: "Customer mentioned previous issue with shipping", createdAt: new Date(), color: "yellow" },
+    { id: "note-2", content: "Check order status in system", createdAt: new Date(), color: "blue" },
+    { id: "note-3", content: "Customer prefers email updates over phone calls", createdAt: new Date(), color: "green" },
+    { id: "note-4", content: "Follow up needed within 24 hours", createdAt: new Date(), color: "pink" },
+  ];
 
 type AiResponseLevel = 'instant' | 'quick' | 'immediate';
 
@@ -67,9 +82,18 @@ const mockChatMessages: ChatMessage[] = [
 export default function LiveCall() {
   // IMPLEMENT LATER: Fetch live call data, transcript, and AI suggestions for the active call.
   const [transcript] = useState(mockTranscript);
-  const [aiSuggestions] = useState(mockAISuggestions);
+  const [quickSuggestion, setQuickSuggestion] = useState(mockQuickSuggestion);
   const [notes, setNotes] = useState(mockNotes);
-  const [notesViewMode, setNotesViewMode] = useState<'sticky' | 'bullet'>('sticky');
+  const [notesViewMode, setNotesViewMode] = useState<'sticky' | 'document'>('sticky');
+  
+  // Document-style notes editor state
+  const [documentNotes, setDocumentNotes] = useState('');
+  
+  // Copy functionality state for sticky notes
+  const [copiedNoteIds, setCopiedNoteIds] = useState<Set<string>>(new Set());
+  
+  // Quick suggestion state
+  const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
   
   // Chat functionality state
   const [chatMessages, setChatMessages] = useState(mockChatMessages);
@@ -91,6 +115,10 @@ export default function LiveCall() {
   
   // Copy functionality state for transcript entries
   const [copiedTranscriptIds, setCopiedTranscriptIds] = useState<Set<string>>(new Set());
+  
+  // Copy all functionality state
+  const [copiedAllNotes, setCopiedAllNotes] = useState(false);
+  const [copiedAllDocument, setCopiedAllDocument] = useState(false);
   
   // Screen sharing state
   const [isScreenSharing, setIsScreenSharing] = useState(false);
@@ -216,6 +244,254 @@ export default function LiveCall() {
   const deleteNote = (id: string) => {
     // IMPLEMENT LATER: Delete note from backend
     setNotes(notes.filter(note => note.id !== id));
+  };
+
+  // Copy button: Copies the content of this sticky note to clipboard.
+  const copyStickyNoteToClipboard = async (noteId: string, content: string) => {
+    try {
+      // Use modern Clipboard API for reliable copying across browsers
+      await navigator.clipboard.writeText(content);
+      
+      // Provide visual feedback that copy was successful
+      setCopiedNoteIds(prev => new Set(prev).add(noteId));
+      
+      // Clear the feedback after 2 seconds
+      setTimeout(() => {
+        setCopiedNoteIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(noteId);
+          return newSet;
+        });
+      }, 2000);
+      
+    } catch (err) {
+      // Fallback for browsers that don't support Clipboard API
+      console.warn('Clipboard API not available, falling back to execCommand');
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = content;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        // Still provide visual feedback
+        setCopiedNoteIds(prev => new Set(prev).add(noteId));
+        setTimeout(() => {
+          setCopiedNoteIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(noteId);
+            return newSet;
+          });
+        }, 2000);
+      } catch (fallbackErr) {
+        console.error('Failed to copy sticky note to clipboard:', fallbackErr);
+      }
+    }
+  };
+
+  // Copy all sticky notes to clipboard
+  const copyAllStickyNotes = async () => {
+    try {
+      // Format all notes with timestamps and separators
+      const allNotesText = notes.map((note, index) => {
+        const timestamp = note.createdAt.toLocaleString();
+        return `Note ${index + 1} (${timestamp}):\n${note.content}`;
+      }).join('\n\n---\n\n');
+      
+      const formattedText = `Call Notes Summary - ${new Date().toLocaleString()}\n\n${allNotesText}`;
+      
+      // Use modern Clipboard API
+      await navigator.clipboard.writeText(formattedText);
+      
+      // Provide visual feedback
+      setCopiedAllNotes(true);
+      
+      // Clear feedback after 2 seconds
+      setTimeout(() => {
+        setCopiedAllNotes(false);
+      }, 2000);
+      
+    } catch (err) {
+      // Fallback for browsers that don't support Clipboard API
+      console.warn('Clipboard API not available, falling back to execCommand');
+      try {
+        const allNotesText = notes.map((note, index) => {
+          const timestamp = note.createdAt.toLocaleString();
+          return `Note ${index + 1} (${timestamp}):\n${note.content}`;
+        }).join('\n\n---\n\n');
+        
+        const formattedText = `Call Notes Summary - ${new Date().toLocaleString()}\n\n${allNotesText}`;
+        
+        const textArea = document.createElement('textarea');
+        textArea.value = formattedText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        // Still provide visual feedback
+        setCopiedAllNotes(true);
+        setTimeout(() => {
+          setCopiedAllNotes(false);
+        }, 2000);
+      } catch (fallbackErr) {
+        console.error('Failed to copy all sticky notes to clipboard:', fallbackErr);
+      }
+    }
+  };
+
+  // Copy all document content to clipboard
+  const copyAllDocumentNotes = async () => {
+    try {
+      // Add header and timestamp to document content
+      const timestamp = new Date().toLocaleString();
+      const formattedContent = `Call Summary & Notes - ${timestamp}\n\n${documentNotes || 'No notes written yet.'}`;
+      
+      // Use modern Clipboard API
+      await navigator.clipboard.writeText(formattedContent);
+      
+      // Provide visual feedback
+      setCopiedAllDocument(true);
+      
+      // Clear feedback after 2 seconds
+      setTimeout(() => {
+        setCopiedAllDocument(false);
+      }, 2000);
+      
+    } catch (err) {
+      // Fallback for browsers that don't support Clipboard API
+      console.warn('Clipboard API not available, falling back to execCommand');
+      try {
+        const timestamp = new Date().toLocaleString();
+        const formattedContent = `Call Summary & Notes - ${timestamp}\n\n${documentNotes || 'No notes written yet.'}`;
+        
+        const textArea = document.createElement('textarea');
+        textArea.value = formattedContent;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        // Still provide visual feedback
+        setCopiedAllDocument(true);
+        setTimeout(() => {
+          setCopiedAllDocument(false);
+        }, 2000);
+      } catch (fallbackErr) {
+        console.error('Failed to copy document notes to clipboard:', fallbackErr);
+      }
+    }
+  };
+
+  // IMPLEMENT LATER: Generate AI-powered call summary and insert into the document editor.
+  const generateAiNote = async () => {
+    // Expected API call:
+    // - POST /api/ai/generate-call-summary
+    // - Payload: { 
+    //     callId: string, 
+    //     transcript: TranscriptEntry[], 
+    //     existingNotes: string,
+    //     summaryType: 'full' | 'action_items' | 'key_points'
+    //   }
+    // - Response: { 
+    //     summary: string, 
+    //     actionItems: string[], 
+    //     keyInsights: string[],
+    //     confidence: number 
+    //   }
+    // 
+    // AI features to implement:
+    // 1. Transcript analysis for key conversation points
+    // 2. Customer sentiment detection and summary
+    // 3. Issue identification and resolution tracking
+    // 4. Action items extraction from conversation
+    // 5. Follow-up recommendations based on call context
+    // 6. Integration with existing document content (append vs replace)
+    
+    // Mock AI generation for now
+    const mockAiSummary = `
+Call Summary - ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
+
+Customer: Customer from current call
+Issue: Order inquiry and shipping concerns
+
+Key Points:
+• Customer inquired about order ORD-12345
+• Mentioned previous shipping issues
+• Prefers email communication over phone calls
+• Requires follow-up within 24 hours
+
+Action Items:
+• Check order status in system
+• Update customer preferences for email notifications
+• Schedule follow-up contact within 24 hours
+• Review shipping history for improvement opportunities
+
+Resolution: [To be completed]
+
+Agent Notes: Customer was patient and understanding. Issue appears to be related to shipping delays.
+`;
+
+    // Insert the generated content into the document editor
+    const currentContent = documentNotes;
+    const newContent = currentContent 
+      ? `${currentContent}\n\n---\n\n${mockAiSummary.trim()}`
+      : mockAiSummary.trim();
+    
+    setDocumentNotes(newContent);
+    
+    console.log('AI note generated and inserted into document');
+  };
+
+  // IMPLEMENT LATER: Generate quick suggestion based on call context
+  const generateQuickSuggestion = async () => {
+    setIsGeneratingSuggestion(true);
+    
+    // Expected API call:
+    // - POST /api/ai/quick-suggestion/generate
+    // - Payload: { 
+    //     callId: string,
+    //     transcript: TranscriptEntry[],
+    //     context: 'manual_trigger',
+    //     agentRequest?: string
+    //   }
+    // - Response: { 
+    //     suggestion: string,
+    //     confidence: number,
+    //     context: string,
+    //     id: string
+    //   }
+    //
+    // AI analysis features:
+    // 1. Real-time transcript analysis for customer questions
+    // 2. Context-aware suggestion generation based on conversation flow
+    // 3. Customer sentiment analysis for appropriate response tone
+    // 4. Integration with knowledge base for accurate information
+    // 5. Personalization based on agent experience level and preferences
+    
+    try {
+      // Mock API call delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Mock different suggestions based on call context
+      const suggestions = [
+        "Apologize for the inconvenience and ask for specific details about the issue.",
+        "Offer to escalate to a supervisor if the customer seems frustrated.",
+        "Suggest checking the customer's account history for previous interactions.",
+        "Recommend providing a reference number for follow-up tracking.",
+        "Ask if there's anything else you can help with today."
+      ];
+      
+      const randomSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
+      setQuickSuggestion(randomSuggestion);
+      
+    } catch (error) {
+      console.error('Failed to generate quick suggestion:', error);
+      setQuickSuggestion("Unable to generate suggestion. Please try again.");
+    } finally {
+      setIsGeneratingSuggestion(false);
+    }
   };
 
   // IMPLEMENT LATER: Connect to backend AI chat system
@@ -834,38 +1110,101 @@ export default function LiveCall() {
                       size="sm"
                       onClick={() => setNotesViewMode('sticky')}
                       className="rounded-none border-none"
+                      title="Switch to sticky notes view"
+                      aria-label="Switch to sticky notes view"
                     >
                       <StickyNote size={16} />
                     </Button>
                     <Button 
-                      variant={notesViewMode === 'bullet' ? 'default' : 'ghost'}
+                      variant={notesViewMode === 'document' ? 'default' : 'ghost'}
                       size="sm"
-                      onClick={() => setNotesViewMode('bullet')}
+                      onClick={() => setNotesViewMode('document')}
                       className="rounded-none border-none"
+                      title="Switch to document editor view"
+                      aria-label="Switch to document editor view"
                     >
                       <List size={16} />
                     </Button>
                   </div>
                   
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={addNote}
-                    className="flex items-center gap-2"
-                  >
-                    <Plus size={16} />
-                    Add Note
-                  </Button>
+                  {notesViewMode === 'sticky' ? (
+                    <>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={addNote}
+                        className="flex items-center gap-2"
+                        aria-label="Add new sticky note"
+                      >
+                        <Plus size={16} />
+                        Add Note
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={copyAllStickyNotes}
+                        className="flex items-center gap-2"
+                        aria-label="Copy all sticky notes to clipboard"
+                        title="Copy all sticky notes with timestamps"
+                      >
+                        {copiedAllNotes ? (
+                          <>
+                            <Check size={16} className="text-green-600" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={16} />
+                            Copy All
+                          </>
+                        )}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        onClick={generateAiNote}
+                        className="flex items-center gap-2 bg-primary hover:bg-primary/90"
+                        aria-label="Generate AI-powered call summary"
+                        title="Generate AI summary based on call transcript and notes"
+                      >
+                        <Plus size={16} />
+                        Generate AI Note
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={copyAllDocumentNotes}
+                        className="flex items-center gap-2"
+                        aria-label="Copy all document content to clipboard"
+                        title="Copy entire document with timestamp"
+                      >
+                        {copiedAllDocument ? (
+                          <>
+                            <Check size={16} className="text-green-600" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={16} />
+                            Copy All
+                          </>
+                        )}
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
               <div 
-                className="flex-1 overflow-y-auto p-4 bg-muted/30 max-h-96 scrollbar-thin"
+                className="flex-1 overflow-y-auto p-4 bg-muted/30 scrollbar-thin"
               >
                 {/* IMPLEMENT LATER: Connect to backend for real-time note synchronization */}
                 {/* Expected features: auto-save, real-time collaboration, note categories, search */}
                 
                 {notesViewMode === 'sticky' ? (
-                  // Sticky Notes View
+                  // Sticky Notes View - Keep UI as is, except replace edit with copy
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {notes.map((note) => (
                       <div 
@@ -887,16 +1226,24 @@ export default function LiveCall() {
                         <div className="flex items-center justify-between mt-2 text-xs text-gray-600 dark:text-gray-300">
                           <span>{note.createdAt.toLocaleTimeString()}</span>
                           <div className="flex gap-1">
+                            {/* Copy button: Copies the content of this sticky note to clipboard. */}
                             <button 
                               className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded"
-                              title="Edit note"
+                              onClick={() => copyStickyNoteToClipboard(note.id, note.content)}
+                              title={copiedNoteIds.has(note.id) ? "Copied!" : "Copy note content"}
+                              aria-label={`Copy sticky note content: ${note.content.substring(0, 30)}${note.content.length > 30 ? '...' : ''}`}
                             >
-                              <Edit3 size={12} />
+                              {copiedNoteIds.has(note.id) ? (
+                                <Check size={12} className="text-green-600 dark:text-green-400" />
+                              ) : (
+                                <Copy size={12} />
+                              )}
                             </button>
                             <button 
                               className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded text-red-600 dark:text-red-400"
                               onClick={() => deleteNote(note.id)}
                               title="Delete note"
+                              aria-label="Delete sticky note"
                             >
                               <Trash2 size={12} />
                             </button>
@@ -906,48 +1253,52 @@ export default function LiveCall() {
                     ))}
                   </div>
                 ) : (
-                  // Bullet List View
-                  <div 
-                    className="bg-card border border-border rounded-lg p-6 shadow-sm min-h-full overflow-y-auto max-h-96 scrollbar-thin"
-                  >
-                    <div className="prose prose-sm max-w-none">
-                      <h3 className="text-lg font-semibold mb-4 text-card-foreground">Call Notes Summary</h3>
-                      {notes.length === 0 ? (
-                        <p className="text-muted-foreground italic">No notes yet. Add some notes to see them as bullet points here.</p>
-                      ) : (
-                        <ul className="space-y-3">
-                          {notes.map((note, index) => (
-                            <li key={note.id} className="group">
-                              <div className="flex items-start gap-3">
-                                <div className="flex-1">
-                                  <div className="text-card-foreground leading-relaxed">
-                                    {note.content || "Empty note"}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground mt-1">
-                                    Added at {note.createdAt.toLocaleTimeString()}
-                                  </div>
-                                </div>
-                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                  <button 
-                                    className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
-                                    title="Edit note"
-                                  >
-                                    <Edit3 size={14} />
-                                  </button>
-                                  <button 
-                                    className="p-1 hover:bg-muted rounded text-red-600 dark:text-red-400"
-                                    onClick={() => deleteNote(note.id)}
-                                    title="Delete note"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
-                                </div>
-                              </div>
-                              {index < notes.length - 1 && <hr className="mt-3 border-border" />}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                  // Document-Style Editor - Redesigned as blank document space
+                  <div className="h-full">
+                    <div 
+                      className="bg-background border border-border rounded-lg shadow-sm h-full flex flex-col"
+                      style={{ minHeight: '400px' }}
+                    >
+                      {/* Document Header */}
+                      <div className="border-b border-border p-3 bg-muted/50">
+                        <h3 className="text-sm font-medium text-foreground">Call Summary & Notes</h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Document-style editor for comprehensive call notes
+                        </p>
+                      </div>
+                      
+                      {/* Document Editor */}
+                      <div className="flex-1 p-0">
+                        <textarea
+                          value={documentNotes}
+                          onChange={(e) => setDocumentNotes(e.target.value)}
+                          placeholder="Type your call summary or notes here…
+
+You can freely format and organize your notes in this document-style space. 
+
+Use the 'Generate AI Note' button to automatically create summaries based on the call transcript and existing notes."
+                          className="w-full h-full border-none resize-none text-sm leading-relaxed p-4 bg-transparent focus:outline-none placeholder-muted-foreground"
+                          style={{ 
+                            fontFamily: 'inherit',
+                            lineHeight: '1.6',
+                            minHeight: '350px'
+                          }}
+                          aria-label="Document-style call notes editor"
+                        />
+                      </div>
+                      
+                      {/* Document Footer */}
+                      <div className="border-t border-border p-2 bg-muted/30">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>
+                            {documentNotes.length} characters
+                            {documentNotes.split(/\s+/).filter(word => word.length > 0).length > 0 && 
+                              ` • ${documentNotes.split(/\s+/).filter(word => word.length > 0).length} words`
+                            }
+                          </span>
+                          <span>Auto-saved • Last updated: {new Date().toLocaleTimeString()}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -960,17 +1311,54 @@ export default function LiveCall() {
         <Card className="p-6 flex flex-col gap-4 h-full">
           <h2 className="text-xl font-semibold mb-2 text-card-foreground">AI Assistant & Chat</h2>
           
-          {/* Static AI Suggestions */}
+          {/* Quick Suggestion Section */}
           <div className="border-b border-border pb-4">
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">Quick Suggestions</h3>
-            {/* IMPLEMENT LATER: Display dynamic RAG output based on call context and agent experience level */}
-            {/* Expected AI features: real-time suggestions, context-aware responses, sentiment analysis */}
-            <div className="space-y-2">
-              {aiSuggestions.map((suggestion, idx) => (
-                <div key={idx} className="p-2 bg-muted rounded text-xs border-l-2 border-primary">
-                  {suggestion}
-                </div>
-              ))}
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-muted-foreground">Quick Suggestion</h3>
+              <div className="flex items-center gap-2">
+                {/* Manual Trigger Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={generateQuickSuggestion}
+                  disabled={isGeneratingSuggestion}
+                  className="flex items-center gap-1 px-2 py-1 h-7"
+                  title="Generate Quick Suggestion"
+                  aria-label="Generate AI-powered quick suggestion for current call context"
+                >
+                  {isGeneratingSuggestion ? (
+                    <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Zap size={12} />
+                  )}
+                  <span className="text-xs">Generate</span>
+                </Button>
+                
+                {/* Automatic Generation Info */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-1 h-7 w-7"
+                  title="A quick suggestion will automatically appear here whenever the customer asks a question."
+                  aria-label="Information about automatic suggestion generation"
+                >
+                  <Info size={12} className="text-muted-foreground" />
+                </Button>
+              </div>
+            </div>
+            
+            {/* Single Quick Suggestion Display */}
+            <div className="p-3 bg-muted/50 rounded-lg border border-border">
+              <div className="text-sm text-foreground leading-relaxed">
+                {isGeneratingSuggestion ? (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    <span>Generating suggestion...</span>
+                  </div>
+                ) : (
+                  quickSuggestion
+                )}
+              </div>
             </div>
           </div>
 
@@ -984,7 +1372,7 @@ export default function LiveCall() {
             </div>
 
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto bg-muted/30 rounded-lg p-3 mb-3 min-h-0 max-h-80 scrollbar-thin">
+            <div className="flex-1 overflow-y-auto bg-muted/30 rounded-lg p-3 mb-3 min-h-0 scrollbar-thin">
               {/* IMPLEMENT LATER: Load chat history from backend and implement real-time messaging */}
               {/* Expected WebSocket events: 'message-received', 'ai-typing', 'message-delivered' */}
               <div className="space-y-3">
@@ -1097,25 +1485,6 @@ export default function LiveCall() {
                 <Send size={16} />
               </Button>
             </div>
-          </div>
-
-          {/* Experience Level Controls */}
-          {/* IMPLEMENT LATER: Add controls to switch between "newbie," "intermediate," and "experienced" script modes */}
-          {/* Expected backend integration: user preference storage, script customization per experience level */}
-          <div className="border-t border-border pt-4">
-            <div className="text-sm font-medium mb-3">Experience Level</div>
-            <div className="flex gap-2">
-              <Button variant="outline" disabled className="flex-1 text-xs">
-                Newbie
-              </Button>
-              <Button variant="outline" disabled className="flex-1 text-xs">
-                Intermediate
-              </Button>
-              <Button variant="outline" disabled className="flex-1 text-xs">
-                Experienced
-              </Button>
-            </div>
-            {/* IMPLEMENT LATER: Enable buttons and update script output based on selection */}
           </div>
         </Card>
       </div>

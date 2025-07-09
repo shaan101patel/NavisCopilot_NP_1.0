@@ -278,13 +278,20 @@ export default function Analytics() {
   // IMPLEMENT LATER: Fetch analytics and performance data from backend (Supabase).
   const data = mockAnalyticsData;
 
-  // Calculate averages for today's performance comparison
-  const calculateAverages = () => {
-    // Calculate team averages from time series data for comparison
-    const totalCallsAvg = mockTimeSeriesData.totalCalls.reduce((sum, d) => sum + (d.teamAverage || 0), 0) / mockTimeSeriesData.totalCalls.length;
-    const callDurationAvg = mockTimeSeriesData.callDuration.reduce((sum, d) => sum + (d.teamAverage || 0), 0) / mockTimeSeriesData.callDuration.length;
-    const satisfactionAvg = mockTimeSeriesData.satisfaction.reduce((sum, d) => sum + (d.teamAverage || 0), 0) / mockTimeSeriesData.satisfaction.length;
-    const resolutionAvg = mockTimeSeriesData.resolutionScore.reduce((sum, d) => sum + (d.teamAverage || 0), 0) / mockTimeSeriesData.resolutionScore.length;
+  // Calculate agent's personal averages for today's performance comparison
+  const calculateAgentAverages = () => {
+    // Calculate agent's historical averages from time series data (excluding today)
+    const historicalData = mockTimeSeriesData.totalCalls.slice(0, -1); // Exclude today's data
+    const totalCallsAvg = historicalData.reduce((sum, d) => sum + d.value, 0) / historicalData.length;
+    
+    const callDurationHistorical = mockTimeSeriesData.callDuration.slice(0, -1);
+    const callDurationAvg = callDurationHistorical.reduce((sum, d) => sum + d.value, 0) / callDurationHistorical.length;
+    
+    const satisfactionHistorical = mockTimeSeriesData.satisfaction.slice(0, -1);
+    const satisfactionAvg = satisfactionHistorical.reduce((sum, d) => sum + d.value, 0) / satisfactionHistorical.length;
+    
+    const resolutionHistorical = mockTimeSeriesData.resolutionScore.slice(0, -1);
+    const resolutionAvg = resolutionHistorical.reduce((sum, d) => sum + d.value, 0) / resolutionHistorical.length;
     
     return {
       totalCalls: Math.round(totalCallsAvg),
@@ -294,7 +301,7 @@ export default function Analytics() {
     };
   };
 
-  const averages = calculateAverages();
+  const agentAverages = calculateAgentAverages();
 
   const exportData = () => {
     // IMPLEMENT LATER: Export analytics data to CSV/Excel
@@ -379,7 +386,11 @@ export default function Analytics() {
             color: 'text-blue-500',
             bgColor: 'bg-blue-500',
             description: 'Number of calls handled over time',
-            insights: [
+            insights: activeTab === 'today' ? [
+              'Today: 23 calls vs your average of 20 calls (+15%)',
+              'Strong performance - above your personal average',
+              'Peak productivity achieved during mid-morning hours'
+            ] : [
               'Peak performance on June 29th with 25 calls',
               'Consistent above-team performance',
               'System outage on June 27th caused spike in call volume'
@@ -393,7 +404,11 @@ export default function Analytics() {
             color: 'text-green-500',
             bgColor: 'bg-green-500',
             description: 'Percentage of issues resolved successfully',
-            insights: [
+            insights: activeTab === 'today' ? [
+              'Today: 91% resolution vs your average of 87% (+4.6%)',
+              'Excellent performance above personal baseline',
+              'Effective use of new resolution techniques'
+            ] : [
               'Highest score of 94% on June 28th',
               'Consistent improvement after training',
               'Performing above team and company averages'
@@ -407,7 +422,11 @@ export default function Analytics() {
             color: 'text-purple-500',
             bgColor: 'bg-purple-500',
             description: 'Average customer satisfaction rating',
-            insights: [
+            insights: activeTab === 'today' ? [
+              'Today: 4.7 rating vs your average of 4.3 (+9.3%)',
+              'Outstanding customer feedback today',
+              'Improved empathy and active listening showing results'
+            ] : [
               'Excellent performance with 4.7 rating on June 28th',
               'Consistently exceeding team expectations',
               'Strong upward trend in customer feedback'
@@ -421,7 +440,11 @@ export default function Analytics() {
             color: 'text-orange-500',
             bgColor: 'bg-orange-500',
             description: 'Overall productivity rating based on multiple factors',
-            insights: [
+            insights: activeTab === 'today' ? [
+              'Today: 89% productivity vs your average of 85% (+4.7%)',
+              'Efficient workflow and time management',
+              'Optimal balance of speed and quality achieved'
+            ] : [
               'Peak productivity of 90% on June 28th',
               'Strong performance above team average',
               'Consistent improvement over time'
@@ -435,7 +458,11 @@ export default function Analytics() {
             color: 'text-blue-500',
             bgColor: 'bg-blue-500',
             description: 'Average duration of calls handled',
-            insights: [
+            insights: activeTab === 'today' ? [
+              'Today: 4.1 min vs your average of 4.4 min (-6.8%)',
+              'Faster resolution times showing efficiency gains',
+              'Improved questioning techniques reducing call duration'
+            ] : [
               'Excellent efficiency with 3.8 min average on June 28th',
               'Significantly below team average (faster resolution)',
               'Improved questioning techniques reducing call time'
@@ -449,7 +476,11 @@ export default function Analytics() {
             color: 'text-green-500',
             bgColor: 'bg-green-500',
             description: 'Average time spent per ticket',
-            insights: [
+            insights: activeTab === 'today' ? [
+              'Today: 11.7 min vs your average of 12.5 min (-6.4%)',
+              'Improved efficiency in ticket processing',
+              'Better workflow organization contributing to faster resolution'
+            ] : [
               'Best performance of 10.8 min on June 28th',
               'Consistently faster than team average',
               'Efficient ticket processing and resolution'
@@ -463,7 +494,11 @@ export default function Analytics() {
             color: 'text-purple-500',
             bgColor: 'bg-purple-500',
             description: 'Average time to resolve issues',
-            insights: [
+            insights: activeTab === 'today' ? [
+              'Today: 2.7 hours vs your average of 2.9 hours (-6.9%)',
+              'Faster issue resolution than personal baseline',
+              'Effective escalation and follow-up processes'
+            ] : [
               'Fastest resolution of 2.4 hours on June 28th',
               'Significantly faster than team and company averages',
               'Improved escalation process contributing to faster resolution'
@@ -515,7 +550,14 @@ export default function Analytics() {
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-card-foreground">{metricData.title}</h2>
-                <p className="text-sm text-muted-foreground">{metricData.description}</p>
+                <p className="text-sm text-muted-foreground">
+                  {metricData.description}
+                  {activeTab === 'today' && (
+                    <span className="ml-2 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs font-medium">
+                      Today vs Your Average
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -619,7 +661,9 @@ export default function Analytics() {
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="w-3 h-0.5 bg-muted-foreground opacity-70" style={{ borderTop: '2px dashed' }}></div>
-                      <span>Team Average</span>
+                      <span>
+                        {activeTab === 'today' ? 'Your Average' : 'Team Average'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -656,7 +700,7 @@ export default function Analytics() {
                         <span className="font-semibold">{d.value}{metricData.unit}</span>
                         {d.teamAverage && (
                           <span className="text-muted-foreground">
-                            (Team: {d.teamAverage}{metricData.unit})
+                            ({activeTab === 'today' ? 'Avg' : 'Team'}: {d.teamAverage}{metricData.unit})
                           </span>
                         )}
                         {(d as any).events && (d as any).events.length > 0 && (
@@ -672,6 +716,11 @@ export default function Analytics() {
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                   <Zap className="w-4 h-4" />
                   AI-Generated Insights
+                  {activeTab === 'today' && (
+                    <Badge variant="default" className="ml-2">
+                      Personal Analysis
+                    </Badge>
+                  )}
                 </h3>
                 <div className="space-y-2">
                   {metricData.insights.map((insight, i) => (
@@ -685,8 +734,10 @@ export default function Analytics() {
                 {/* IMPLEMENT LATER: AI-generated recommendations */}
                 <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    <strong>IMPLEMENT LATER:</strong> AI-generated recommendations based on metric trends, 
-                    performance patterns, and predictive analytics will appear here.
+                    <strong>IMPLEMENT LATER:</strong> {activeTab === 'today' 
+                      ? 'AI-generated personal recommendations based on today\'s performance patterns and historical trends will appear here.'
+                      : 'AI-generated recommendations based on metric trends, performance patterns, and predictive analytics will appear here.'
+                    }
                   </p>
                 </div>
               </Card>
@@ -960,7 +1011,7 @@ export default function Analytics() {
       {/* Today Tab */}
       {activeTab === "today" && (
         <div className="space-y-6">
-          {/* Today's Performance Overview */}
+          {/* Today's Performance Overview - Now Interactive */}
           <Card className="p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Calendar className="w-5 h-5 text-blue-500" />
@@ -971,31 +1022,47 @@ export default function Analytics() {
                 "Calls Today",
                 23,
                 <Phone className="w-6 h-6 text-blue-500" />,
-                Math.round(((23 - averages.totalCalls) / averages.totalCalls) * 100),
-                "vs team average"
+                Math.round(((23 - agentAverages.totalCalls) / agentAverages.totalCalls) * 100),
+                "vs your average",
+                () => setSelectedMetric('totalCalls')
               )}
               {renderMetricCard(
                 "Avg Call Duration",
                 "4.1m",
                 <Clock className="w-6 h-6 text-green-500" />,
-                Math.round(((4.1 - averages.callDuration) / averages.callDuration) * 100),
-                "vs team average"
+                Math.round(((4.1 - agentAverages.callDuration) / agentAverages.callDuration) * 100),
+                "vs your average",
+                () => setSelectedMetric('callDuration')
               )}
               {renderMetricCard(
                 "Customer Satisfaction",
                 "4.7",
                 <ThumbsUp className="w-6 h-6 text-purple-500" />,
-                Math.round(((4.7 - averages.satisfaction) / averages.satisfaction) * 100),
-                "vs team average"
+                Math.round(((4.7 - agentAverages.satisfaction) / agentAverages.satisfaction) * 100),
+                "vs your average",
+                () => setSelectedMetric('satisfaction')
               )}
               {renderMetricCard(
                 "Tickets Resolved",
                 18,
                 <Target className="w-6 h-6 text-orange-500" />,
-                Math.round(((18 - averages.resolution) / averages.resolution) * 100),
-                "vs team average"
+                Math.round(((18 - agentAverages.resolution) / agentAverages.resolution) * 100),
+                "vs your average",
+                () => setSelectedMetric('resolutionScore')
               )}
             </div>
+          </Card>
+
+          {/* Interactive Guide for Today Tab */}
+          <Card className="p-4 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800">
+            <div className="flex items-center gap-2 mb-2">
+              <BarChart3 className="w-4 h-4 text-purple-600" />
+              <span className="font-medium text-purple-800 dark:text-purple-200">Today's Detailed Analytics</span>
+            </div>
+            <p className="text-sm text-purple-700 dark:text-purple-300">
+              Click on any metric above to view detailed graphs and insights comparing today's performance 
+              with your personal historical averages. Identify trends and optimization opportunities for continuous improvement.
+            </p>
           </Card>
 
           {/* Real-time Activity */}

@@ -1,7 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState, useRef, useEffect } from "react";
-import { Search, Send, Users, MessageSquare, Bell, Phone, Filter, MoreVertical } from "lucide-react";
+// REMOVED: Call feature for messaging as per requirements
+import { Search, Send, Users, MessageSquare, Bell, Filter, MoreVertical } from "lucide-react";
 
 // IMPLEMENT LATER: Replace with real user/agent data from backend
 // Expected data structure:
@@ -47,7 +48,7 @@ const mockUsers = [
 //     conversationId: string,
 //     senderId: string,
 //     content: string,
-//     type: 'text' | 'file' | 'system' | 'call_invite',
+//     type: 'text' | 'file' | 'system', // REMOVED: call_invite type as per requirements
 //     timestamp: Date,
 //     isRead: boolean,
 //     editedAt?: Date,
@@ -167,7 +168,7 @@ export default function Notifications() {
     if (!newMessage.trim() || !selectedConversation) return;
 
     // IMPLEMENT LATER: Send message to backend
-    // Expected API call:
+    // Expected API request:
     // - Endpoint: POST /api/messages
     // - Payload: { 
     //     conversationId: string, 
@@ -347,12 +348,10 @@ export default function Notifications() {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  {/* IMPLEMENT LATER: Add call functionality for direct conversations */}
-                  {selectedConversationData.type === 'direct' && (
-                    <Button variant="ghost" size="sm">
-                      <Phone size={16} />
-                    </Button>
-                  )}
+                  {/* REMOVED: Call feature for messaging as per requirements */}
+                  {/* Previously had Phone button for direct conversations */}
+                  {/* REMOVED: Group call feature from group messages */}
+                  {/* No call initiation logic remains in message components */}
                   <Button variant="ghost" size="sm">
                     <MoreVertical size={16} />
                   </Button>

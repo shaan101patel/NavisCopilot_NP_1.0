@@ -6,14 +6,14 @@ import NavisLogoLight from '../../assets/NavisLogo_LightMode-removebg-preview.pn
 import NavisLogoDark from '../../assets/NavisLogo_DarkMode-removebg-preview.png';
 
 const navItems = [
-  { to: "/", label: "Dashboard", icon: <Home size={20} /> },
+  { to: "/dashboard", label: "Dashboard", icon: <Home size={20} /> },
   { to: "/live-call", label: "Live Call", icon: <Phone size={20} /> },
   { to: "/tickets", label: "Tickets", icon: <Ticket size={20} /> },
   { to: "/messages", label: "Messages", icon: <MessageSquare size={20} /> },
   { to: "/documents", label: "Documents", icon: <FileText size={20} /> },
   { to: "/analytics", label: "Analytics", icon: <BarChart2 size={20} /> },
   { to: "/agent-improvement", label: "Agent Improvement", icon: <TrendingUp size={20} /> },
-  { to: "/admin", label: "Admin", icon: <Settings size={20} /> },
+  { to: "/settings", label: "Settings", icon: <Settings size={20} /> },
 ];
 
 interface SidebarProps {
