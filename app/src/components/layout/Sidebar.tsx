@@ -27,7 +27,7 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
   
   return (
     <aside className={clsx(
-      "h-screen bg-card border-r border-border flex flex-col transition-all duration-300 ease-in-out overflow-hidden",
+      "h-full bg-card border-r border-border flex flex-col transition-all duration-300 ease-in-out overflow-hidden",
       "dark:bg-card dark:border-border", // Enhanced dark mode support
       isCollapsed ? "w-0" : "w-64"
     )}>
