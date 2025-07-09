@@ -5,16 +5,6 @@ import { setUser } from '@/store/userSlice'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Phone, Plus, Trash2, Edit3 } from 'lucide-react'
-
-// Phone number interface for type safety
-interface PhoneNumber {
-  id: string;
-  number: string;
-  label: string;
-  isPrimary: boolean;
-  isActive: boolean;
-}
 
 // Icons
 const UserIcon = () => (
@@ -61,27 +51,6 @@ export default function Settings() {
     autoSave: true,
   })
 
-  // Phone number configuration state
-  const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([
-    {
-      id: '1',
-      number: '+1 (555) 123-4567',
-      label: 'Main Office',
-      isPrimary: true,
-      isActive: true
-    },
-    {
-      id: '2',
-      number: '+1 (555) 987-6543',
-      label: 'Support Line',
-      isPrimary: false,
-      isActive: true
-    }
-  ])
-  const [newPhoneNumber, setNewPhoneNumber] = useState('')
-  const [newPhoneLabel, setNewPhoneLabel] = useState('')
-  const [editingPhoneId, setEditingPhoneId] = useState<string | null>(null)
-
   const handleSaveProfile = () => {
     if (user) {
       dispatch(setUser({
@@ -101,73 +70,6 @@ export default function Settings() {
   const handleSavePreferences = () => {
     // In a real app, this would make an API call to save user preferences
     alert('Preferences saved!')
-  }
-
-  // Phone number management functions
-  const handleAddPhoneNumber = () => {
-    if (!newPhoneNumber.trim() || !newPhoneLabel.trim()) {
-      alert('Please enter both phone number and label')
-      return
-    }
-
-    // IMPLEMENT LATER: Add phone number via API
-    // Expected API call:
-    // POST /api/user/phone-numbers
-    // Payload: { number: string, label: string, isPrimary: boolean }
-    // Response: { id: string, number: string, label: string, isPrimary: boolean, isActive: boolean }
-    
-    const newPhone: PhoneNumber = {
-      id: Date.now().toString(),
-      number: newPhoneNumber,
-      label: newPhoneLabel,
-      isPrimary: phoneNumbers.length === 0, // First number becomes primary
-      isActive: true
-    }
-
-    setPhoneNumbers([...phoneNumbers, newPhone])
-    setNewPhoneNumber('')
-    setNewPhoneLabel('')
-    alert('Phone number added successfully!')
-  }
-
-  const handleDeletePhoneNumber = (id: string) => {
-    const phoneToDelete = phoneNumbers.find(p => p.id === id)
-    if (phoneToDelete?.isPrimary && phoneNumbers.length > 1) {
-      alert('Cannot delete primary phone number. Please set another number as primary first.')
-      return
-    }
-
-    // IMPLEMENT LATER: Delete phone number via API
-    // Expected API call:
-    // DELETE /api/user/phone-numbers/{id}
-    // Response: { success: boolean }
-    
-    setPhoneNumbers(phoneNumbers.filter(p => p.id !== id))
-    alert('Phone number deleted successfully!')
-  }
-
-  const handleSetPrimaryPhone = (id: string) => {
-    // IMPLEMENT LATER: Update primary phone via API
-    // Expected API call:
-    // PUT /api/user/phone-numbers/{id}/set-primary
-    // Response: { success: boolean }
-    
-    setPhoneNumbers(phoneNumbers.map(phone => ({
-      ...phone,
-      isPrimary: phone.id === id
-    })))
-    alert('Primary phone number updated!')
-  }
-
-  const handleTogglePhoneStatus = (id: string) => {
-    // IMPLEMENT LATER: Toggle phone status via API
-    // Expected API call:
-    // PUT /api/user/phone-numbers/{id}/toggle-status
-    // Response: { success: boolean, isActive: boolean }
-    
-    setPhoneNumbers(phoneNumbers.map(phone => 
-      phone.id === id ? { ...phone, isActive: !phone.isActive } : phone
-    ))
   }
 
   if (!user) {
@@ -235,129 +137,6 @@ export default function Settings() {
             
             <div className="mt-6">
               <Button onClick={handleSaveProfile}>Save Profile Changes</Button>
-            </div>
-          </Card>
-
-          {/* Phone Number Configuration */}
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Phone className="h-5 w-5" />
-              <h2 className="text-lg font-semibold text-gray-900">Phone Number Configuration</h2>
-            </div>
-            
-            <div className="space-y-4">
-              {/* Existing Phone Numbers */}
-              <div className="space-y-3">
-                {phoneNumbers.map((phone) => (
-                  <div key={phone.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900">{phone.number}</span>
-                        {phone.isPrimary && (
-                          <span className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded-full">
-                            Primary
-                          </span>
-                        )}
-                        {!phone.isActive && (
-                          <span className="px-2 py-1 text-xs bg-gray-400 text-white rounded-full">
-                            Inactive
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-600">{phone.label}</p>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {!phone.isPrimary && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSetPrimaryPhone(phone.id)}
-                          className="text-xs"
-                          title="Set as primary phone number"
-                        >
-                          Set Primary
-                        </Button>
-                      )}
-                      
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleTogglePhoneStatus(phone.id)}
-                        className={`text-xs ${phone.isActive ? 'text-orange-600 hover:text-orange-700' : 'text-green-600 hover:text-green-700'}`}
-                        title={phone.isActive ? 'Deactivate phone number' : 'Activate phone number'}
-                      >
-                        {phone.isActive ? 'Deactivate' : 'Activate'}
-                      </Button>
-                      
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeletePhoneNumber(phone.id)}
-                        className="text-xs text-red-600 hover:text-red-700"
-                        title="Delete phone number"
-                        aria-label={`Delete phone number ${phone.number}`}
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              {/* Add New Phone Number */}
-              <div className="border-t border-gray-200 pt-4">
-                <h3 className="text-md font-medium text-gray-900 mb-3">Add New Phone Number</h3>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone Number
-                    </label>
-                    <Input
-                      type="tel"
-                      value={newPhoneNumber}
-                      onChange={(e) => setNewPhoneNumber(e.target.value)}
-                      placeholder="+1 (555) 123-4567"
-                      className="w-full"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Label
-                    </label>
-                    <Input
-                      type="text"
-                      value={newPhoneLabel}
-                      onChange={(e) => setNewPhoneLabel(e.target.value)}
-                      placeholder="e.g., Main Office, Support Line"
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-                
-                <div className="mt-3">
-                  <Button
-                    onClick={handleAddPhoneNumber}
-                    className="flex items-center gap-2"
-                    disabled={!newPhoneNumber.trim() || !newPhoneLabel.trim()}
-                  >
-                    <Plus size={16} />
-                    Add Phone Number
-                  </Button>
-                </div>
-              </div>
-              
-              {/* Phone Configuration Help */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-blue-900 mb-2">Phone Number Configuration</h4>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• <strong>Primary:</strong> The main phone number used for outbound calls</li>
-                  <li>• <strong>Active:</strong> Phone numbers available for making calls</li>
-                  <li>• <strong>Inactive:</strong> Phone numbers temporarily disabled</li>
-                  <li>• You must have at least one active phone number</li>
-                </ul>
-              </div>
             </div>
           </Card>
 
