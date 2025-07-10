@@ -1,7 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Phone, Ticket, BarChart2, Settings, MessageSquare, FileText, TrendingUp, MessageCircle, ChevronDown, ChevronRight } from "lucide-react";
+import { Home, Phone, Ticket, BarChart2, Settings, MessageSquare, FileText, TrendingUp, MessageCircle, ChevronDown, ChevronRight, PhoneIncoming, Cable } from "lucide-react";
 import clsx from "clsx";
 import { useTheme } from '../../hooks/useTheme';
+import { useAgent } from '../../hooks/livecall/useAgent';
 import { useState } from 'react';
 import NavisLogoLight from '../../assets/NavisLogo_LightMode-removebg-preview.png';
 import NavisLogoDark from '../../assets/NavisLogo_DarkMode-removebg-preview.png';
@@ -18,6 +19,7 @@ const comingSoonItems = [
   { to: "/messages", label: "Messages", icon: <MessageSquare size={20} /> },
   { to: "/analytics", label: "Analytics", icon: <BarChart2 size={20} /> },
   { to: "/agent-improvement", label: "Agent Improvement", icon: <TrendingUp size={20} /> },
+  { to: "/external-connections", label: "External Connections", icon: <Cable size={20} /> },
 ];
 
 interface SidebarProps {
@@ -27,6 +29,7 @@ interface SidebarProps {
 export function Sidebar({ isCollapsed }: SidebarProps) {
   const location = useLocation();
   const { resolvedTheme } = useTheme();
+  const { simulateIncomingCall } = useAgent();
   const isDark = resolvedTheme === 'dark';
   const [isComingSoonExpanded, setIsComingSoonExpanded] = useState(false);
   
@@ -132,9 +135,9 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
           </ul>
         </div>
         
-        {/* Feedback link positioned at bottom */}
+        {/* Feedback link and temporary simulation button positioned at bottom */}
         <div className="mt-auto pb-3">
-          <div className="border-t border-border pt-3">
+          <div className="border-t border-border pt-3 space-y-1">
             <Link
               to="/feedback"
               className={clsx(
@@ -149,6 +152,17 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
               <MessageCircle size={20} />
               Feedback
             </Link>
+            
+            {/* Temporary simulation button for testing */}
+            <button
+              onClick={simulateIncomingCall}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-orange-100 dark:hover:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800"
+              aria-label="Simulate incoming call for testing"
+              title="Testing: Simulate an incoming call"
+            >
+              <PhoneIncoming size={20} />
+              <span className="text-xs">Test Incoming Call</span>
+            </button>
           </div>
         </div>
       </nav>

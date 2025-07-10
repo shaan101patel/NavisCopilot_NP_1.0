@@ -5,7 +5,7 @@
  * Centralizes call management logic and provides clean interface for components.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { CallSession } from '@/types/livecall';
 
 // Mock data for call sessions
@@ -33,6 +33,24 @@ const mockCallSessions: CallSession[] = [
 export const useLiveCallState = () => {
   const [callSessions, setCallSessions] = useState<CallSession[]>(mockCallSessions);
   const [activeTabId, setActiveTabId] = useState('tab-1');
+  
+  // Check for pending call tab from incoming calls
+  // IMPLEMENT LATER: Replace with real-time WebSocket events
+  useEffect(() => {
+    const pendingCallTab = sessionStorage.getItem('pendingCallTab');
+    if (pendingCallTab) {
+      try {
+        const callTabData = JSON.parse(pendingCallTab);
+        setCallSessions(prev => [...prev, callTabData]);
+        setActiveTabId(callTabData.tabId);
+        sessionStorage.removeItem('pendingCallTab');
+        console.log('Added pending call tab:', callTabData);
+      } catch (error) {
+        console.error('Failed to parse pending call tab:', error);
+        sessionStorage.removeItem('pendingCallTab');
+      }
+    }
+  }, []); // Run once on mount
   
   // Get current active call session
   const activeCallSession = callSessions.find(session => session.tabId === activeTabId);
