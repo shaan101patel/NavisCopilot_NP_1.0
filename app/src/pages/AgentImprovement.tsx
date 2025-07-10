@@ -19,6 +19,7 @@ import {
   BookOpen,
   Zap,
   Star,
+  Info,
   ArrowRight,
   BarChart3,
   Users,
@@ -464,6 +465,17 @@ export default function AgentImprovement() {
 
   return (
     <div className="space-y-6">
+      {/* Beta Feature Disclaimer */}
+      <div className="flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+        <Info size={20} className="text-orange-600 dark:text-orange-400 flex-shrink-0" />
+        <div className="flex-1">
+          <p className="text-sm text-orange-800 dark:text-orange-200">
+            <strong>Coming Soon:</strong> This Agent Improvement feature is planned for implementation in the 1.0 release. 
+            All data currently displayed is mock data, and the final interface may differ from what you see now.
+          </p>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-heading">Agent Improvement</h1>

@@ -19,6 +19,7 @@ import {
   Filter,
   Calendar,
   BarChart3,
+  Info,
   PieChart,
   Activity,
   Award,
@@ -29,7 +30,6 @@ import {
   Calendar as CalendarIcon,
   ArrowDown,
   ArrowUp,
-  Info,
   HelpCircle
 } from "lucide-react";
 import { useState } from "react";
@@ -793,6 +793,17 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
+      {/* Beta Feature Disclaimer */}
+      <div className="flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+        <Info size={20} className="text-orange-600 dark:text-orange-400 flex-shrink-0" />
+        <div className="flex-1">
+          <p className="text-sm text-orange-800 dark:text-orange-200">
+            <strong>Coming Soon:</strong> This Analytics feature is planned for implementation in the 1.0 release. 
+            All data currently displayed is mock data, and the final interface may differ from what you see now.
+          </p>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

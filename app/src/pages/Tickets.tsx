@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { TicketDetailsView } from "@/components/tickets";
 import { useState, useMemo } from "react";
 import { 
   Search, 
@@ -184,6 +185,8 @@ export default function Tickets() {
   const [showNewTicketModal, setShowNewTicketModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showTicketDetails, setShowTicketDetails] = useState(false);
+  const [selectedTicketForDetails, setSelectedTicketForDetails] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Form states
@@ -409,6 +412,11 @@ export default function Tickets() {
     setShowEditModal(true);
   };
 
+  const openTicketDetails = (ticket: any) => {
+    setSelectedTicketForDetails(ticket);
+    setShowTicketDetails(true);
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -566,7 +574,11 @@ export default function Tickets() {
         )}
 
         {!isLoading && filteredAndSortedTickets.map((ticket) => (
-          <Card key={ticket.id} className="hover:shadow-md transition-shadow duration-200">
+          <Card 
+            key={ticket.id} 
+            className="hover:shadow-md transition-shadow duration-200 cursor-pointer"
+            onClick={() => openTicketDetails(ticket)}
+          >
             <CardContent className="p-6">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 {/* Main ticket info */}
@@ -629,7 +641,17 @@ export default function Tickets() {
                 </div>
 
                 {/* Action buttons */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openTicketDetails(ticket)}
+                    className="flex items-center gap-1"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span className="hidden sm:inline">View Details</span>
+                  </Button>
+                  
                   <Button
                     variant="outline"
                     size="sm"
@@ -657,7 +679,7 @@ export default function Tickets() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openTicketDetails(ticket)}>
                         <Eye className="w-4 h-4 mr-2" />
                         View Details
                       </DropdownMenuItem>
@@ -1100,6 +1122,18 @@ export default function Tickets() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Ticket Details Modal */}
+      {showTicketDetails && selectedTicketForDetails && (
+        <TicketDetailsView
+          ticket={selectedTicketForDetails}
+          isOpen={showTicketDetails}
+          onClose={() => {
+            setShowTicketDetails(false);
+            setSelectedTicketForDetails(null);
+          }}
+        />
       )}
     </div>
   );

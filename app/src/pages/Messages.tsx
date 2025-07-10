@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState, useRef, useEffect } from "react";
 // REMOVED: Call feature for messaging as per requirements
-import { Search, Send, Users, MessageSquare, Bell, Filter, MoreVertical } from "lucide-react";
+import { Search, Send, Users, MessageSquare, Bell, Filter, MoreVertical, Info } from "lucide-react";
 
 // IMPLEMENT LATER: Replace with real user/agent data from backend
 // Expected data structure:
@@ -231,7 +231,19 @@ export default function Notifications() {
   const currentMessages = selectedConversation ? mockMessages[selectedConversation as keyof typeof mockMessages] || [] : [];
 
   return (
-    <div className="h-[calc(100vh-200px)] flex gap-6">
+    <div className="h-[calc(100vh-200px)] flex flex-col gap-6">
+      {/* Beta Feature Disclaimer */}
+      <div className="flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+        <Info size={20} className="text-orange-600 dark:text-orange-400 flex-shrink-0" />
+        <div className="flex-1">
+          <p className="text-sm text-orange-800 dark:text-orange-200">
+            <strong>Coming Soon:</strong> This Messages feature is planned for implementation in the 1.0 release. 
+            All data currently displayed is mock data, and the final interface may differ from what you see now.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex gap-6 flex-1 min-h-0">
       {/* Conversations Sidebar */}
       <div className="w-80 flex flex-col">
         <div className="mb-4">
@@ -439,6 +451,7 @@ export default function Notifications() {
             </div>
           </Card>
         )}
+      </div>
       </div>
     </div>
   );

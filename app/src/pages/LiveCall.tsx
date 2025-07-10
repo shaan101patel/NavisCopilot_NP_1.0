@@ -135,7 +135,7 @@ export default function LiveCall() {
       {/* Header with Call Information and Controls */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-heading text-foreground">Live Call</h1>
+          <h1 className="text-3xl font-heading text-foreground">Live Calls</h1>
           {callState.activeCallSession && (
             <p className="text-sm text-muted-foreground mt-1">
               {callState.activeCallSession.participantInfo.customer} 

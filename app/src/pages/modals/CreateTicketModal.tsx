@@ -50,8 +50,8 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     callId: '',
     issueTitle: '',
     issueDescription: '',
-    priority: 'medium',
-    category: 'general',
+    priority: '',
+    category: '',
     agentNotes: ''
   });
 
@@ -77,8 +77,8 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         callId: '',
         issueTitle: '',
         issueDescription: '',
-        priority: 'medium',
-        category: 'general',
+        priority: '',
+        category: '',
         agentNotes: ''
       });
     }
@@ -94,11 +94,6 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   };
 
   const handleTicketSubmit = () => {
-    // Validate required fields
-    if (!ticketForm.customerName || !ticketForm.issueTitle || !ticketForm.issueDescription) {
-      return;
-    }
-
     // IMPLEMENT LATER: Submit ticket to backend
     console.log('Creating ticket:', ticketForm);
     
@@ -135,7 +130,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="customer-name" className="block text-sm font-medium text-foreground mb-1">
-                  Customer Name *
+                  Customer Name
                 </label>
                 <Input
                   id="customer-name"
@@ -143,12 +138,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                   value={ticketForm.customerName}
                   onChange={(e) => handleTicketFormChange('customerName', e.target.value)}
                   placeholder="Enter customer's full name"
-                  required
-                  aria-describedby="customer-name-help"
                 />
-                <p id="customer-name-help" className="text-xs text-muted-foreground mt-1">
-                  Required field
-                </p>
               </div>
               <div>
                 <label htmlFor="customer-email" className="block text-sm font-medium text-foreground mb-1">
@@ -196,7 +186,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             <h3 className="text-lg font-medium text-foreground">Issue Details</h3>
             <div>
               <label htmlFor="issue-title" className="block text-sm font-medium text-foreground mb-1">
-                Issue Title *
+                Issue Title
               </label>
               <Input
                 id="issue-title"
@@ -204,26 +194,21 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 value={ticketForm.issueTitle}
                 onChange={(e) => handleTicketFormChange('issueTitle', e.target.value)}
                 placeholder="Brief summary of the customer's issue"
-                required
-                aria-describedby="issue-title-help"
               />
-              <p id="issue-title-help" className="text-xs text-muted-foreground mt-1">
-                Required - Keep it concise and descriptive
-              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="priority" className="block text-sm font-medium text-foreground mb-1">
-                  Priority *
+                  Priority
                 </label>
                 <select
                   id="priority"
                   value={ticketForm.priority}
                   onChange={(e) => handleTicketFormChange('priority', e.target.value)}
                   className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
-                  required
                 >
+                  <option value="">Select priority level</option>
                   <option value="low">Low - General inquiry</option>
                   <option value="medium">Medium - Standard issue</option>
                   <option value="high">High - Urgent issue</option>
@@ -232,15 +217,15 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               </div>
               <div>
                 <label htmlFor="category" className="block text-sm font-medium text-foreground mb-1">
-                  Category *
+                  Category
                 </label>
                 <select
                   id="category"
                   value={ticketForm.category}
                   onChange={(e) => handleTicketFormChange('category', e.target.value)}
                   className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
-                  required
                 >
+                  <option value="">Select category</option>
                   <option value="general">General Support</option>
                   <option value="technical">Technical Issue</option>
                   <option value="billing">Billing & Payment</option>
@@ -252,7 +237,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
             <div>
               <label htmlFor="issue-description" className="block text-sm font-medium text-foreground mb-1">
-                Issue Description *
+                Issue Description
               </label>
               <textarea
                 id="issue-description"
@@ -260,13 +245,8 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 onChange={(e) => handleTicketFormChange('issueDescription', e.target.value)}
                 placeholder="Detailed description of the issue, including steps to reproduce, error messages, and any relevant context from the call..."
                 rows={4}
-                required
-                aria-describedby="issue-description-help"
                 className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring resize-vertical"
               />
-              <p id="issue-description-help" className="text-xs text-muted-foreground mt-1">
-                Required - Provide as much detail as possible to help resolve the issue quickly
-              </p>
             </div>
 
             <div>
@@ -298,7 +278,6 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           </Button>
           <Button
             onClick={handleTicketSubmit}
-            disabled={!ticketForm.customerName || !ticketForm.issueTitle || !ticketForm.issueDescription}
             className="flex items-center gap-2"
           >
             <Plus size={16} />

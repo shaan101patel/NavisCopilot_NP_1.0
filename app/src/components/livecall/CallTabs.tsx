@@ -19,11 +19,11 @@ export const CallTabs: React.FC<CallTabsProps> = ({
 }) => {
   return (
     <div className="flex items-center bg-muted/30 border-b border-border mb-6">
-      <div className="flex flex-1 overflow-x-auto scrollbar-thin">
+      <div className="flex flex-1 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground">
         {callSessions.map((session) => (
           <div
             key={session.tabId}
-            className={`relative flex items-center min-w-0 max-w-xs group ${
+            className={`relative flex items-center flex-shrink-0 min-w-0 w-48 group ${
               session.tabId === activeTabId 
                 ? 'bg-background border-t-2 border-primary' 
                 : 'bg-muted/50 hover:bg-muted/70'
@@ -36,7 +36,7 @@ export const CallTabs: React.FC<CallTabsProps> = ({
           >
             <button
               onClick={() => onSwitchTab(session.tabId)}
-              className="flex items-center gap-2 px-4 py-3 text-sm font-medium min-w-0 flex-1 focus:outline-none focus:ring-2 focus:ring-ring"
+              className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium min-w-0 flex-1 focus:outline-none focus:ring-2 focus:ring-ring"
               title={`${session.tabLabel} - ${session.participantInfo.customer || 'Unknown Customer'}`}
               aria-label={`Switch to call tab: ${session.tabLabel}`}
             >
@@ -49,15 +49,18 @@ export const CallTabs: React.FC<CallTabsProps> = ({
                 'bg-gray-400'
               }`}></div>
               
-              {/* Tab Label */}
-              <span className="truncate flex-1 text-left">
-                {session.tabLabel}
-              </span>
-              
-              {/* Customer Info */}
-              <span className="text-xs text-muted-foreground truncate max-w-24">
-                {session.participantInfo.customer}
-              </span>
+              {/* Tab Content - Stacked Layout for Smaller Width */}
+              <div className="flex flex-col min-w-0 flex-1">
+                {/* Tab Label */}
+                <span className="truncate text-left text-xs font-medium">
+                  {session.tabLabel}
+                </span>
+                
+                {/* Customer Info */}
+                <span className="text-xs text-muted-foreground truncate">
+                  {session.participantInfo.customer}
+                </span>
+              </div>
             </button>
             
             {/* Close Tab Button */}
@@ -66,11 +69,11 @@ export const CallTabs: React.FC<CallTabsProps> = ({
                 e.stopPropagation();
                 onCloseTab(session.tabId);
               }}
-              className="p-1 mr-2 rounded hover:bg-destructive/20 hover:text-destructive opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity focus:outline-none focus:ring-2 focus:ring-ring"
+              className="p-1 mr-1.5 rounded hover:bg-destructive/20 hover:text-destructive opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity focus:outline-none focus:ring-2 focus:ring-ring"
               title="Close tab"
               aria-label={`Close call tab: ${session.tabLabel}`}
             >
-              <X size={14} />
+              <X size={12} />
             </button>
           </div>
         ))}
@@ -81,7 +84,7 @@ export const CallTabs: React.FC<CallTabsProps> = ({
         onClick={onCreateNewTab}
         variant="ghost"
         size="sm"
-        className="ml-2 mr-4 flex items-center gap-1"
+        className="ml-2 mr-4 flex items-center gap-1 flex-shrink-0"
         title="Start new call session"
         aria-label="Create new call tab"
       >
