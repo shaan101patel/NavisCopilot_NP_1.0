@@ -61,7 +61,7 @@ Navis is developing an AI-powered customer service and sales platform focused on
 
 ---
 
-## Project Scope (MVP Frontend)
+## Project Scope 
 
 **Core User Flows:**
 - Agent Dashboard: View active tickets, join/leave calls, and see live transcription and AI suggestions.
@@ -81,18 +81,6 @@ Navis is developing an AI-powered customer service and sales platform focused on
 - Advanced CRM integrations beyond basic ticketing.
 - Full-featured notification system.
 - Extensive settings or customization panels.
-- Non-essential animations or visual effects.
-
----
-
-## Action Steps
-
-1. Initialize the repository with the recommended structure and tooling.
-2. Set up CI/CD with linting, testing, and preview deployments.
-3. Implement core UI components and pages according to the user flows above.
-4. Integrate with backend APIs for live data (transcripts, tickets, analytics).
-5. Test workflows end-to-end with realistic data.
-6. Iterate based on user feedback and QA.
 
 ---
 

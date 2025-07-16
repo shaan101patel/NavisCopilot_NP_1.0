@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 // IMPLEMENT LATER: Authentication integration with backend
 // Expected backend integration:
@@ -44,6 +45,7 @@ import { useNavigate } from "react-router-dom";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { signIn } = useAuth();
   
   // Form state management
   const [formData, setFormData] = useState({
@@ -111,39 +113,16 @@ export default function Login() {
     setErrors({});
     
     try {
-      // IMPLEMENT LATER: Replace with actual authentication API call
-      // Expected API call:
-      // const response = await fetch('/api/auth/login', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({
-      //     email: formData.email,
-      //     password: formData.password,
-      //     rememberMe: formData.rememberMe
-      //   }),
-      // });
-      // 
-      // const data = await response.json();
-      // 
-      // if (data.success) {
-      //   // Store authentication token securely
-      //   localStorage.setItem('authToken', data.token);
-      //   // Update global auth state
-      //   setAuthUser(data.user);
-      //   // Redirect to dashboard
-      //   navigate('/dashboard');
-      // } else {
-      //   setErrors({ general: data.message || 'Login failed' });
-      // }
+      const { error } = await signIn(formData.email, formData.password);
       
-      // Mock authentication delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Mock successful login - redirect to dashboard
-      console.log('Mock login successful with:', formData);
-      navigate('/dashboard');
+      if (error) {
+        setErrors({
+          general: error.message || 'Authentication failed. Please try again.'
+        });
+      } else {
+        // Successful login - user will be redirected by AuthContext
+        navigate('/dashboard');
+      }
       
     } catch (error) {
       console.error('Login error:', error);
@@ -158,8 +137,8 @@ export default function Login() {
   // Handle demo login (for development/testing)
   const handleDemoLogin = () => {
     setFormData({
-      email: 'agent@navis.com',
-      password: 'demo123',
+      email: 'test@test.com',
+      password: 'password123',
       rememberMe: false
     });
     setErrors({});

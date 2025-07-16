@@ -6,6 +6,7 @@
     "@fontsource/inter": "^5.2.6",
     "@fontsource/poppins": "^5.2.6",
     "@reduxjs/toolkit": "^2.8.2",
+    "@supabase/supabase-js": "^2.50.5",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
