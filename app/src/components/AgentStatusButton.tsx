@@ -50,27 +50,7 @@ export const AgentStatusButton: React.FC<AgentStatusButtonProps> = () => {
   const popupRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  // IMPLEMENT LATER: Replace with real WebSocket or polling for incoming calls
-  // Expected WebSocket event: { type: 'incoming_call', data: IncomingCall }
-  // Expected API endpoint: GET /api/agent/status, PUT /api/agent/status
-  useEffect(() => {
-    // Mock incoming call simulation - remove when backend is ready
-    const mockIncomingCall = () => {
-      if (agentStatus.status === 'ready' && Math.random() > 0.95) {
-        const mockCall: IncomingCall = {
-          callId: `call-${Date.now()}`,
-          callerName: 'John Doe',
-          callerNumber: '+1 (555) 123-4567',
-          timestamp: new Date()
-        };
-        setIncomingCall(mockCall);
-        setShowCallPopup(true);
-      }
-    };
 
-    const interval = setInterval(mockIncomingCall, 5000);
-    return () => clearInterval(interval);
-  }, [agentStatus.status]);
 
   // Handle clicking outside to close popup
   useEffect(() => {

@@ -1,8 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Phone, Ticket, BarChart2, Settings, MessageSquare, FileText, TrendingUp, MessageCircle, ChevronDown, ChevronRight, PhoneIncoming, Cable } from "lucide-react";
+import { Home, Phone, Ticket, BarChart2, Settings, MessageSquare, FileText, TrendingUp, MessageCircle, ChevronDown, ChevronRight, Cable } from "lucide-react";
 import clsx from "clsx";
 import { useTheme } from '../../hooks/useTheme';
-import { useAgent } from '../../hooks/livecall/useAgent';
+
 import { useState } from 'react';
 import NavisLogoLight from '../../assets/NavisLogo_LightMode-removebg-preview.png';
 import NavisLogoDark from '../../assets/NavisLogo_DarkMode-removebg-preview.png';
@@ -29,7 +29,6 @@ interface SidebarProps {
 export function Sidebar({ isCollapsed }: SidebarProps) {
   const location = useLocation();
   const { resolvedTheme } = useTheme();
-  const { simulateIncomingCall } = useAgent();
   const isDark = resolvedTheme === 'dark';
   const [isComingSoonExpanded, setIsComingSoonExpanded] = useState(false);
   
@@ -153,16 +152,7 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
               Feedback
             </Link>
             
-            {/* Temporary simulation button for testing */}
-            <button
-              onClick={simulateIncomingCall}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-orange-100 dark:hover:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800"
-              aria-label="Simulate incoming call for testing"
-              title="Testing: Simulate an incoming call"
-            >
-              <PhoneIncoming size={20} />
-              <span className="text-xs">Test Incoming Call</span>
-            </button>
+
           </div>
         </div>
       </nav>

@@ -25,7 +25,6 @@ interface AgentContextType {
   
   // Incoming call handling
   incomingCall: IncomingCall | null;
-  simulateIncomingCall: () => void;
   acceptIncomingCall: () => void;
   declineIncomingCall: () => void;
   
@@ -43,26 +42,7 @@ export const AgentProvider: React.FC<AgentProviderProps> = ({ children }) => {
   const [status, setStatus] = useState<AgentStatus>('ready');
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   
-  // IMPLEMENT LATER: Replace with real incoming call detection
-  // Expected backend integration:
-  // - WebSocket connection for real-time call notifications
-  // - Data structure: { callId, callerName, callerNumber, priority, accountInfo }
-  // - Integration with telephony system (Twilio, etc.)
-  const simulateIncomingCall = useCallback(() => {
-    if (status !== 'ready') {
-      console.log('Agent not ready to receive calls');
-      return;
-    }
 
-    const mockCall: IncomingCall = {
-      callId: `call-${Date.now()}`,
-      callerName: `Customer ${Math.floor(Math.random() * 1000)}`,
-      callerNumber: `+1-555-${Math.floor(Math.random() * 9000) + 1000}`,
-      timestamp: new Date()
-    };
-
-    setIncomingCall(mockCall);
-  }, [status]);
 
   // IMPLEMENT LATER: Replace with backend call acceptance
   // Expected backend actions:
@@ -121,7 +101,6 @@ export const AgentProvider: React.FC<AgentProviderProps> = ({ children }) => {
     status,
     setStatus,
     incomingCall,
-    simulateIncomingCall,
     acceptIncomingCall,
     declineIncomingCall,
     createCallTabFromIncoming
