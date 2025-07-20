@@ -6,6 +6,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { AgentProvider } from "@/contexts/AgentContext";
 import { ProtectedRoute, AdminRoute } from "./components/ProtectedRoute";
 import Login from "@/pages/Login";
+import CreateAccount from "@/pages/CreateAccount";
 import Dashboard from "@/pages/Dashboard";
 import LiveCall from "@/pages/LiveCall";
 import Tickets from "@/pages/Tickets";
@@ -30,6 +31,7 @@ function App() {
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
+              <Route path="/create-account" element={<CreateAccount />} />
               <Route path="/" element={<Login />} />
               
               {/* Protected Routes */}

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Auth Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Supabase Auth Test</h1>
+    
+    <div>
+        <h2>Create User</h2>
+        <button onclick="createTestUser()">Create Test User</button>
+        <pre id="createResult"></pre>
+    </div>
+    
+    <div>
+        <h2>Test Login</h2>
+        <button onclick="testLogin()">Test Login</button>
+        <pre id="loginResult"></pre>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://fjdurojwqtqoydmqjvmk.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqZHVyb2p3cXRxb3lkbXFqdm1rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2MzU0NTQsImV4cCI6MjA2NzIxMTQ1NH0.jcz4nwvURFMqkicKBf-_oEk_rZFT2jdm365oWzn6CYQ';
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        async function createTestUser() {
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email: 'newtest@test.com',
+                    password: 'Password123',
+                    options: {
+                        data: {
+                            full_name: 'New Test User'
+                        }
+                    }
+                });
+
+                document.getElementById('createResult').textContent = JSON.stringify({ data, error }, null, 2);
+                
+                if (data.user && !error) {
+                    // Create profile
+                    const { data: profileData, error: profileError } = await supabase
+                        .from('profiles')
+                        .insert({
+                            id: data.user.id,
+                            full_name: 'New Test User',
+                            role: 'agent',
+                            status: 'ready'
+                        });
+                    
+                    console.log('Profile creation result:', { profileData, profileError });
+                }
+            } catch (err) {
+                document.getElementById('createResult').textContent = 'Error: ' + err.message;
+            }
+        }
+
+        async function testLogin() {
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: 'newtest@test.com',
+                    password: 'Password123'
+                });
+
+                document.getElementById('loginResult').textContent = JSON.stringify({ data, error }, null, 2);
+            } catch (err) {
+                document.getElementById('loginResult').textContent = 'Error: ' + err.message;
+            }
+        }
+    </script>
+</body>
+</html> 

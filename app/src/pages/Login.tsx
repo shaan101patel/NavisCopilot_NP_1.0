@@ -2,50 +2,13 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
-// IMPLEMENT LATER: Authentication integration with backend
-// Expected backend integration:
-// 1. POST /api/auth/login - User authentication endpoint
-// 2. JWT token management and storage
-// 3. User session handling and validation
-// 4. Password reset functionality
-// 5. Multi-factor authentication support
-// 6. OAuth integration (Google, Microsoft, etc.)
-// 
-// Expected data structures:
-// interface LoginRequest {
-//   email: string;
-//   password: string;
-//   rememberMe?: boolean;
-// }
-// 
-// interface LoginResponse {
-//   success: boolean;
-//   token: string;
-//   user: {
-//     id: string;
-//     email: string;
-//     name: string;
-//     role: 'agent' | 'supervisor' | 'admin';
-//     permissions: string[];
-//   };
-//   expiresAt: Date;
-// }
-// 
-// Security considerations:
-// - Password validation and strength requirements
-// - Rate limiting for failed login attempts
-// - Account lockout after multiple failed attempts
-// - Secure token storage (httpOnly cookies or secure localStorage)
-// - CSRF protection
-// - Input sanitization and validation
-
 export default function Login() {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signIn, isLoading, forgotPassword } = useAuth();
   
   // Form state management
   const [formData, setFormData] = useState({
@@ -56,47 +19,32 @@ export default function Login() {
   
   // UI state management
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{
     email?: string;
     password?: string;
     general?: string;
   }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordMessage, setForgotPasswordMessage] = useState('');
 
-  // Handle form input changes
-  const handleInputChange = (field: keyof typeof formData, value: string | boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    
-    // Clear specific field errors when user starts typing
-    if (errors[field as keyof typeof errors]) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: undefined
-      }));
-    }
-  };
-
-  // Basic form validation (client-side only)
+  // Input validation
   const validateForm = () => {
     const newErrors: typeof errors = {};
-    
-    // Email validation
+
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
-    
-    // Password validation
+
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -108,217 +56,272 @@ export default function Login() {
     if (!validateForm()) {
       return;
     }
-    
-    setIsLoading(true);
+
+    setIsSubmitting(true);
     setErrors({});
-    
+
     try {
-      const { error } = await signIn(formData.email, formData.password);
+      await signIn({
+        email: formData.email,
+        password: formData.password,
+        rememberMe: formData.rememberMe
+      });
       
-      if (error) {
-        setErrors({
-          general: error.message || 'Authentication failed. Please try again.'
-        });
-      } else {
-        // Successful login - user will be redirected by AuthContext
-        navigate('/dashboard');
-      }
-      
+      // Redirect to dashboard on successful login
+      navigate('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
       setErrors({
-        general: 'An error occurred during login. Please try again.'
+        general: error instanceof Error ? error.message : 'Login failed. Please check your credentials and try again.'
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  // Handle demo login (for development/testing)
-  const handleDemoLogin = () => {
-    setFormData({
-      email: 'test@test.com',
-      password: 'password123',
-      rememberMe: false
-    });
-    setErrors({});
+  // Handle forgot password
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!forgotPasswordEmail) {
+      setErrors({ email: 'Email is required' });
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotPasswordEmail)) {
+      setErrors({ email: 'Please enter a valid email address' });
+      return;
+    }
+
+    try {
+      await forgotPassword(forgotPasswordEmail);
+      setForgotPasswordMessage('If an account with that email exists, a password reset link has been sent.');
+      setErrors({});
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      setErrors({
+        general: error instanceof Error ? error.message : 'Failed to send reset email. Please try again.'
+      });
+    }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-      <div className="w-full max-w-md">
-        <Card className="p-8 shadow-xl border-0">
-          {/* Header Section */}
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+    
+    // Clear errors when user starts typing
+    if (errors[name as keyof typeof errors]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: undefined
+      }));
+    }
+  };
+
+  if (showForgotPassword) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md p-8 shadow-xl">
           <div className="text-center mb-8">
-            <div className="mb-4">
-              {/* IMPLEMENT LATER: Add Navis logo here */}
-              <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-primary-foreground">N</span>
-              </div>
-            </div>
-            <h1 className="text-3xl font-heading font-bold text-foreground mb-2">
-              Welcome to Navis
-            </h1>
-            <p className="text-muted-foreground">
-              Sign in to access your customer service dashboard
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Reset Password</h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Enter your email address and we'll send you a link to reset your password.
             </p>
           </div>
 
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* General Error Message */}
-            {errors.general && (
-              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                <p className="text-sm text-destructive">{errors.general}</p>
-              </div>
-            )}
+          {forgotPasswordMessage && (
+            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <p className="text-green-700 dark:text-green-300 text-sm">
+                {forgotPasswordMessage}
+              </p>
+            </div>
+          )}
 
-            {/* Email Field */}
-            <div className="space-y-2">
-              <label 
-                htmlFor="email" 
-                className="block text-sm font-medium text-foreground"
-              >
+          {errors.general && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
+              <AlertCircle size={16} className="text-red-500" />
+              <p className="text-red-700 dark:text-red-300 text-sm">
+                {errors.general}
+              </p>
+            </div>
+          )}
+
+          <form onSubmit={handleForgotPassword} className="space-y-6">
+            <div>
+              <label htmlFor="forgotEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Email Address
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail size={16} className="text-muted-foreground" />
-                </div>
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                 <Input
-                  id="email"
+                  id="forgotEmail"
                   type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="Enter your email address"
-                  className={`pl-10 ${errors.email ? 'border-destructive focus:border-destructive' : ''}`}
-                  aria-describedby={errors.email ? "email-error" : undefined}
+                  value={forgotPasswordEmail}
+                  onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                  className={`pl-10 ${errors.email ? 'border-red-500 focus:border-red-500' : ''}`}
+                  placeholder="Enter your email"
                   disabled={isLoading}
-                  autoComplete="email"
                 />
               </div>
               {errors.email && (
-                <p id="email-error" className="text-sm text-destructive">
-                  {errors.email}
-                </p>
+                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
               )}
             </div>
 
-            {/* Password Field */}
-            <div className="space-y-2">
-              <label 
-                htmlFor="password" 
-                className="block text-sm font-medium text-foreground"
-              >
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock size={16} className="text-muted-foreground" />
-                </div>
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  placeholder="Enter your password"
-                  className={`pl-10 pr-10 ${errors.password ? 'border-destructive focus:border-destructive' : ''}`}
-                  aria-describedby={errors.password ? "password-error" : undefined}
-                  disabled={isLoading}
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  disabled={isLoading}
-                >
-                  {showPassword ? (
-                    <EyeOff size={16} className="text-muted-foreground hover:text-foreground" />
-                  ) : (
-                    <Eye size={16} className="text-muted-foreground hover:text-foreground" />
-                  )}
-                </button>
-              </div>
-              {errors.password && (
-                <p id="password-error" className="text-sm text-destructive">
-                  {errors.password}
-                </p>
-              )}
-            </div>
-
-            {/* Remember Me Checkbox */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  type="checkbox"
-                  checked={formData.rememberMe}
-                  onChange={(e) => handleInputChange('rememberMe', e.target.checked)}
-                  className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
-                  disabled={isLoading}
-                />
-                <label htmlFor="remember-me" className="ml-2 text-sm text-muted-foreground">
-                  Remember me
-                </label>
-              </div>
-              
-              {/* IMPLEMENT LATER: Add forgot password functionality */}
-              <button
-                type="button"
-                className="text-sm text-primary hover:text-primary/80 focus:outline-none focus:underline"
+            <div className="space-y-4">
+              <Button 
+                type="submit" 
+                className="w-full" 
                 disabled={isLoading}
+              >
+                {isLoading ? 'Sending...' : 'Send Reset Link'}
+              </Button>
+              
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full"
                 onClick={() => {
-                  // IMPLEMENT LATER: Navigate to forgot password page
-                  console.log('Forgot password clicked');
+                  setShowForgotPassword(false);
+                  setForgotPasswordEmail('');
+                  setForgotPasswordMessage('');
+                  setErrors({});
                 }}
               >
-                Forgot password?
-              </button>
+                Back to Login
+              </Button>
             </div>
-
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-              aria-label="Sign in to Navis dashboard"
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  <span>Signing in...</span>
-                </div>
-              ) : (
-                'Sign In'
-              )}
-            </Button>
-
-            {/* Demo Login Button (Development Only) */}
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={handleDemoLogin}
-              disabled={isLoading}
-              aria-label="Fill form with demo credentials"
-            >
-              Fill Demo Credentials
-            </Button>
           </form>
-
-          {/* Footer Section */}
-          <div className="mt-8 text-center">
-            <p className="text-xs text-muted-foreground">
-              © 2025 Navis. All rights reserved.
-            </p>
-            <p className="text-xs text-muted-foreground mt-2">
-              Need help? Contact your system administrator.
-            </p>
-          </div>
         </Card>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md p-8 shadow-xl">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome to Navis</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            AI-powered customer service platform
+          </p>
+        </div>
+
+        {errors.general && (
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
+            <AlertCircle size={16} className="text-red-500" />
+            <p className="text-red-700 dark:text-red-300 text-sm">
+              {errors.general}
+            </p>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Email Address
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className={`pl-10 ${errors.email ? 'border-red-500 focus:border-red-500' : ''}`}
+                placeholder="Enter your email"
+                disabled={isSubmitting || isLoading}
+                autoComplete="email"
+              />
+            </div>
+            {errors.email && (
+              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Password
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <Input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                value={formData.password}
+                onChange={handleInputChange}
+                className={`pl-10 pr-10 ${errors.password ? 'border-red-500 focus:border-red-500' : ''}`}
+                placeholder="Enter your password"
+                disabled={isSubmitting || isLoading}
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                disabled={isSubmitting || isLoading}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            {errors.password && (
+              <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                id="rememberMe"
+                name="rememberMe"
+                type="checkbox"
+                checked={formData.rememberMe}
+                onChange={handleInputChange}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                disabled={isSubmitting || isLoading}
+              />
+              <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                Remember me
+              </label>
+            </div>
+            
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(true)}
+              className="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+              disabled={isSubmitting || isLoading}
+            >
+              Forgot password?
+            </button>
+          </div>
+
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={isSubmitting || isLoading}
+          >
+            {isSubmitting ? 'Signing in...' : 'Sign In'}
+          </Button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Don't have an account?{' '}
+            <button
+              onClick={() => navigate('/create-account')}
+              className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors"
+            >
+              Create one here
+            </button>
+          </p>
+        </div>
+      </Card>
     </div>
   );
 }

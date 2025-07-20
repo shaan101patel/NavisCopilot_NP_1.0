@@ -1,124 +1,214 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/services/supabase';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { authAPI, LoginRequest, LoginResponse } from '../services/supabase';
 
-interface Profile {
+// Update app/src/contexts/AuthContext.tsx
+interface User {
   id: string;
-  full_name: string | null;
-  role: 'agent' | 'admin';
-  phone_number: string | null;
-  created_at: string | null;
-  updated_at: string | null;
+  email: string;      // Now stored in profiles
+  name: string;       // Renamed from full_name
+  role: 'agent' | 'supervisor' | 'admin';  // Updated enum
+  phone?: string;     // Renamed from phone_number
+  avatar?: string;    // New field
+  bio?: string;       // New field
+  department?: string; // New field
+  status?: string;    // New field
+  preferences?: object; // New field
+}
+
+interface SignUpRequest {
+  email: string;
+  password: string;
+  fullName: string;
+  phone?: string;
+  role: 'agent' | 'supervisor' | 'admin';
 }
 
 interface AuthContextType {
   user: User | null;
-  profile: Profile | null;
-  session: Session | null;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error?: any }>;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  signIn: (credentials: LoginRequest) => Promise<void>;
+  signUp: (userData: SignUpRequest) => Promise<{ error?: { message: string } }>;
   signOut: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (accessToken: string, refreshToken: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+interface AuthProviderProps {
+  children: ReactNode;
+}
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const TOKEN_KEY = 'navis-auth-tokens';
+const USER_KEY = 'navis-user';
+
+export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Load user from localStorage on app start
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
+    const loadStoredAuth = async () => {
+      try {
+        const storedTokens = localStorage.getItem(TOKEN_KEY);
+        const storedUser = localStorage.getItem(USER_KEY);
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event: any, session: Session | null) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
-        setLoading(false);
-      }
-    });
+        if (storedTokens && storedUser) {
+          const tokens = JSON.parse(storedTokens);
+          const userData = JSON.parse(storedUser);
 
-    return () => subscription.unsubscribe();
+          // Check if token is expired
+          const now = Math.floor(Date.now() / 1000);
+          if (tokens.expires_at && tokens.expires_at > now) {
+            setUser(userData);
+          } else if (tokens.refresh_token) {
+            // Try to refresh the token
+            try {
+              const refreshedAuth = await authAPI.refreshToken(tokens.refresh_token);
+              setUser(refreshedAuth.user);
+              
+              // Store updated tokens
+              localStorage.setItem(TOKEN_KEY, JSON.stringify(refreshedAuth.session));
+              localStorage.setItem(USER_KEY, JSON.stringify(refreshedAuth.user));
+            } catch (refreshError) {
+              console.error('Token refresh failed:', refreshError);
+              // Clear invalid tokens
+              localStorage.removeItem(TOKEN_KEY);
+              localStorage.removeItem(USER_KEY);
+            }
+          } else {
+            // No valid tokens, clear storage
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(USER_KEY);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading stored auth:', error);
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(USER_KEY);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadStoredAuth();
   }, []);
 
-  const fetchProfile = async (userId: string) => {
+  const signIn = async (credentials: LoginRequest) => {
     try {
-      // Set default profile to avoid infinite loading
-      setProfile({
-        id: userId,
-        full_name: null,
-        role: 'agent' as const,
-        phone_number: null,
-        created_at: null,
-        updated_at: null,
-      });
-      setLoading(false);
+      setIsLoading(true);
+      
+      const authResponse = await authAPI.login(credentials);
+      
+      if (authResponse.success) {
+        setUser(authResponse.user);
+        
+        // Store tokens and user data
+        localStorage.setItem(TOKEN_KEY, JSON.stringify(authResponse.session));
+        localStorage.setItem(USER_KEY, JSON.stringify(authResponse.user));
+      } else {
+        throw new Error('Authentication failed');
+      }
     } catch (error) {
-      console.error('Error fetching profile:', error);
-      setProfile(null);
-      setLoading(false);
+      console.error('Sign in error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signUp = async (userData: SignUpRequest) => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      setIsLoading(true);
+      
+      // Use the new dedicated signup method
+      const authResponse = await authAPI.signUp({
+        email: userData.email,
+        password: userData.password,
+        fullName: userData.fullName,
+        phone: userData.phone,
+        role: userData.role
       });
       
-      if (error) throw error;
-      
-      return { data };
-    } catch (error) {
-      return { error };
+      if (authResponse.success) {
+        setUser(authResponse.user);
+        
+        // Store tokens and user data
+        localStorage.setItem(TOKEN_KEY, JSON.stringify(authResponse.session));
+        localStorage.setItem(USER_KEY, JSON.stringify(authResponse.user));
+        
+        return {}; // Success
+      } else {
+        return { error: { message: 'Account creation failed' } };
+      }
+    } catch (error: any) {
+      console.error('Sign up error:', error);
+      return { error: { message: error.message || 'Account creation failed' } };
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const signOut = async () => {
-    setLoading(true);
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-    setSession(null);
-    setLoading(false);
+    try {
+      setIsLoading(true);
+      
+      // Get current access token for logout
+      const storedTokens = localStorage.getItem(TOKEN_KEY);
+      if (storedTokens) {
+        const tokens = JSON.parse(storedTokens);
+        
+        try {
+          await authAPI.logout(tokens.access_token);
+        } catch (logoutError) {
+          console.error('Logout API call failed:', logoutError);
+          // Continue with local logout even if API call fails
+        }
+      }
+      
+      // Clear local state and storage
+      setUser(null);
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+    } catch (error) {
+      console.error('Sign out error:', error);
+      // Still clear local state even if logout fails
+      setUser(null);
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const value = {
+  const forgotPassword = async (email: string) => {
+    try {
+      await authAPI.forgotPassword(email);
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      throw error;
+    }
+  };
+
+  const resetPassword = async (accessToken: string, refreshToken: string, newPassword: string) => {
+    try {
+      await authAPI.resetPassword(accessToken, refreshToken, newPassword);
+    } catch (error) {
+      console.error('Reset password error:', error);
+      throw error;
+    }
+  };
+
+  const value: AuthContextType = {
     user,
-    profile,
-    session,
-    loading,
+    isAuthenticated: !!user,
+    isLoading,
     signIn,
+    signUp,
     signOut,
+    forgotPassword,
+    resetPassword,
   };
 
   return (
@@ -126,4 +216,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
-};
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
