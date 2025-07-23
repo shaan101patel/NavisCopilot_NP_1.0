@@ -8,21 +8,13 @@
 import { useState, useCallback } from 'react';
 import { ChatMessage, AiResponseLevel } from '@/types/livecall';
 
-// IMPLEMENT LATER: Replace with real chat messages from backend AI system
-const mockChatMessages: ChatMessage[] = [
-  { id: "msg-1", content: "What's the best way to handle shipping complaints?", sender: "agent", timestamp: new Date(Date.now() - 300000) },
-  { id: "msg-2", content: "For shipping complaints, first acknowledge the issue, then check the tracking status in our system. Offer immediate solutions like expedited shipping or refunds based on company policy.", sender: "ai", timestamp: new Date(Date.now() - 250000), aiResponseLevel: "quick" },
-  { id: "msg-3", content: "How should I handle the refund process?", sender: "agent", timestamp: new Date(Date.now() - 120000) },
-];
-
-const mockQuickSuggestion = "Ask for the customer's order number to help track their shipment status.";
-
+// Start with empty AI chat - no mock data
 export const useAiChat = () => {
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(mockChatMessages);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [aiResponseLevel, setAiResponseLevel] = useState<AiResponseLevel>('quick');
   const [isAiTyping, setIsAiTyping] = useState(false);
-  const [quickSuggestion, setQuickSuggestion] = useState(mockQuickSuggestion);
+  const [quickSuggestion, setQuickSuggestion] = useState('');
   const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
 
   // IMPLEMENT LATER: Connect to backend AI chat system

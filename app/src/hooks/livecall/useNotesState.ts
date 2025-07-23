@@ -8,16 +8,9 @@
 import { useState, useCallback } from 'react';
 import { StickyNote, NotesViewMode } from '@/types/livecall';
 
-// IMPLEMENT LATER: Replace with real notes data from backend (Supabase)
-const mockNotes: StickyNote[] = [
-  { id: "note-1", content: "Customer mentioned previous issue with shipping", createdAt: new Date(), color: "yellow" },
-  { id: "note-2", content: "Check order status in system", createdAt: new Date(), color: "blue" },
-  { id: "note-3", content: "Customer prefers email updates over phone calls", createdAt: new Date(), color: "green" },
-  { id: "note-4", content: "Follow up needed within 24 hours", createdAt: new Date(), color: "pink" },
-];
-
+// Start with empty notes - no mock data
 export const useNotesState = () => {
-  const [notes, setNotes] = useState<StickyNote[]>(mockNotes);
+  const [notes, setNotes] = useState<StickyNote[]>([]);
   const [documentNotes, setDocumentNotes] = useState('');
   const [notesViewMode, setNotesViewMode] = useState<NotesViewMode>('sticky');
   

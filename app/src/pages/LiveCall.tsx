@@ -17,7 +17,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { GripHorizontal, Ticket } from "lucide-react";
+import { GripHorizontal, Ticket, Plus } from "lucide-react";
 
 // Import refactored components and hooks
 import {
@@ -41,7 +41,7 @@ import { ConnectAudioModal, CreateTicketModal, TransferDropdown } from './modals
 export default function LiveCall() {
   // Custom hooks for state management
   const callState = useLiveCallState();
-  const callControls = useCallControls();
+  const callControls = useCallControls(callState.activeCallSession?.callId);
   const notesState = useNotesState();
   const aiChatState = useAiChat();
   const transcriptState = useTranscript();
@@ -78,55 +78,62 @@ export default function LiveCall() {
     setIsDragging(false);
   }, []);
 
-  // Attach global mouse events when dragging
+  // Set up mouse event listeners for dragging
   useEffect(() => {
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
-    } else {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
     }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
-  // Update call duration timer (mock)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date();
-      const start = callState.activeCallSession?.callStartTime || new Date();
-      const diffMs = now.getTime() - start.getTime();
-      const minutes = Math.floor(diffMs / 60000);
-      const seconds = Math.floor((diffMs % 60000) / 1000);
-      setCallDuration(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, [callState.activeCallSession?.callStartTime]);
-
-  // Handle modal actions
-  const handleCreateTicket = () => {
-    setShowCreateTicketModal(true);
-  };
-
-  const handleConnectAudioOrControls = () => {
+  // Handle connect audio or show call controls
+  const handleConnectAudioOrControls = useCallback(() => {
     if (callState.hasActiveCall) {
       callControls.toggleCallControls();
     } else {
       setShowConnectAudioModal(true);
     }
-  };
+  }, [callState.hasActiveCall, callControls]);
+
+  // Handle create ticket
+  const handleCreateTicket = useCallback(() => {
+    setShowCreateTicketModal(true);
+  }, []);
+
+  // Handle modal close
+  const handleCloseConnectAudioModal = useCallback(() => {
+    setShowConnectAudioModal(false);
+  }, []);
+
+  const handleCloseCreateTicketModal = useCallback(() => {
+    setShowCreateTicketModal(false);
+  }, []);
+
+  // Show error messages if any
+  useEffect(() => {
+    if (callState.error) {
+      console.error('Call state error:', callState.error);
+      // You could show a toast notification here
+    }
+  }, [callState.error]);
+
+  useEffect(() => {
+    if (callControls.error) {
+      console.error('Call controls error:', callControls.error);
+      // You could show a toast notification here
+    }
+  }, [callControls.error]);
 
   return (
     <div className="h-[calc(100vh-200px)]">
       {/* Chrome-style Call Tabs */}
       <CallTabs
         callSessions={callState.callSessions}
-        activeTabId={callState.activeTabId}
+        activeTabId={callState.activeTabId || ""}
         onSwitchTab={callState.switchToTab}
         onCloseTab={callState.closeCallTab}
         onCreateNewTab={callState.createNewCallTab}
@@ -136,13 +143,17 @@ export default function LiveCall() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-heading text-foreground">Live Calls</h1>
-          {callState.activeCallSession && (
+          {callState.activeCallSession ? (
             <p className="text-sm text-muted-foreground mt-1">
               {callState.activeCallSession.participantInfo.customer} 
               {callState.activeCallSession.participantInfo.customerPhone && 
                 ` • ${callState.activeCallSession.participantInfo.customerPhone}`
               }
               {callState.activeCallSession.callStatus !== 'connecting' && ` • ${callDuration}`}
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground mt-1">
+              No active calls. Click "New Call" to start a call session.
             </p>
           )}
         </div>
@@ -172,8 +183,38 @@ export default function LiveCall() {
         </div>
       </div>
 
+      {/* Error Display */}
+      {(callState.error || callControls.error) && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-red-700 text-sm">
+            {callState.error || callControls.error}
+          </p>
+          <div className="mt-2 flex gap-2">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={callState.error ? () => {} : callControls.clearError}
+            >
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+      {callState.callSessions.length === 0 ? (
+        <div className="flex items-center justify-center h-96 border-2 border-dashed border-gray-300 rounded-lg">
+          <div className="text-center">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Call Sessions</h3>
+            <p className="text-gray-500 mb-4">Click "New Call" to start your first call session</p>
+            <Button onClick={callState.createNewCallTab} className="inline-flex items-center">
+              <Plus className="mr-2 h-4 w-4" />
+              Start New Call
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
         {/* Left Pane: Transcript and Notes with Draggable Divider */}
         <div className="flex flex-col h-full">
           <Card className="flex-1 flex flex-col overflow-hidden" ref={containerRef}>
@@ -193,7 +234,7 @@ export default function LiveCall() {
             </div>
 
             {/* Draggable Divider */}
-            <div 
+            <div
               className="flex items-center justify-center h-3 bg-border hover:bg-primary/20 cursor-row-resize transition-colors"
               onMouseDown={handleMouseDown}
             >
@@ -263,6 +304,7 @@ export default function LiveCall() {
           />
         </Card>
       </div>
+      )}
 
       {/* Modals */}
       
@@ -272,8 +314,8 @@ export default function LiveCall() {
         selectedAgent={callControls.selectedAgent}
         agentSearchQuery={callControls.agentSearchQuery}
         filteredAgents={callControls.filteredAgents}
-        onSelectAgent={callControls.setSelectedAgent}
-        onSearchQueryChange={callControls.setAgentSearchQuery}
+        onSelectAgent={callControls.handleAgentSelect}
+        onSearchQueryChange={callControls.handleAgentSearch}
         onConfirmTransfer={callControls.handleConfirmTransfer}
         onCancelTransfer={callControls.handleCancelTransfer}
       />
@@ -281,13 +323,13 @@ export default function LiveCall() {
       {/* Connect Audio Modal */}
       <ConnectAudioModal
         show={showConnectAudioModal}
-        onClose={() => setShowConnectAudioModal(false)}
+        onClose={handleCloseConnectAudioModal}
       />
 
       {/* Create Ticket Modal */}
       <CreateTicketModal
         show={showCreateTicketModal}
-        onClose={() => setShowCreateTicketModal(false)}
+        onClose={handleCloseCreateTicketModal}
         callSession={callState.activeCallSession}
       />
     </div>

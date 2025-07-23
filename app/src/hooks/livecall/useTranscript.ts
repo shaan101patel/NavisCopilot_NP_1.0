@@ -8,16 +8,9 @@
 import { useState, useCallback } from 'react';
 import { TranscriptEntry } from '@/types/livecall';
 
-// IMPLEMENT LATER: Replace with real-time call and transcript data from backend (Supabase)
-const mockTranscript: TranscriptEntry[] = [
-  { id: "1", speaker: "Agent", text: "Hello, thank you for calling Navis support. How can I help you today?", timestamp: new Date() },
-  { id: "2", speaker: "Customer", text: "Hi, I need help with my order.", timestamp: new Date() },
-  { id: "3", speaker: "Agent", text: "I'd be happy to help you with your order. Can you please provide me with your order number?", timestamp: new Date() },
-  { id: "4", speaker: "Customer", text: "Sure, it's ORD-12345.", timestamp: new Date() },
-];
-
+// Start with empty transcript - no mock data
 export const useTranscript = () => {
-  const [transcript] = useState<TranscriptEntry[]>(mockTranscript);
+  const [transcript] = useState<TranscriptEntry[]>([]);
   const [copiedTranscriptIds, setCopiedTranscriptIds] = useState<Set<string>>(new Set());
 
   // Copy transcript entry to clipboard

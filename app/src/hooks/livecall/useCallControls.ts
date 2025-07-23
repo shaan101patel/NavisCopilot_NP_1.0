@@ -7,12 +7,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Agent } from '../../types/livecall';
+import { callAPI } from '@/services/supabase';
 
-export const useCallControls = () => {
+export const useCallControls = (activeCallId?: string) => {
   const [showCallControlsMenu, setShowCallControlsMenu] = useState(false);
   const [showTransferDropdown, setShowTransferDropdown] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string>('');
   const [agentSearchQuery, setAgentSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // IMPLEMENT LATER: Replace with real agent data from backend user management system
   const mockAvailableAgents: Agent[] = [
@@ -30,130 +33,152 @@ export const useCallControls = () => {
     agent.skillLevel.toLowerCase().includes(agentSearchQuery.toLowerCase())
   );
 
-  // Close call controls menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.call-controls-container')) {
-        setShowCallControlsMenu(false);
-      }
-    };
-    
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setShowCallControlsMenu(false);
-      }
-    };
-    
-    if (showCallControlsMenu) {
-      document.addEventListener('click', handleClickOutside);
-      document.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.removeEventListener('click', handleClickOutside);
-        document.removeEventListener('keydown', handleKeyDown);
-      };
+  // Get available agents (not busy or away)
+  const availableAgents = filteredAgents.filter(agent => 
+    agent.status === 'available'
+  );
+
+  // Handle hold call with backend integration
+  const handleHold = useCallback(async () => {
+    if (!activeCallId) {
+      console.error('No active call ID provided');
+      return;
     }
-  }, [showCallControlsMenu]);
 
-  // Close transfer dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.transfer-dropdown-container')) {
-        setShowTransferDropdown(false);
-      }
-    };
-    
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setShowTransferDropdown(false);
-        setSelectedAgent('');
-        setAgentSearchQuery('');
-      }
-    };
-    
-    if (showTransferDropdown) {
-      document.addEventListener('click', handleClickOutside);
-      document.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.removeEventListener('click', handleClickOutside);
-        document.removeEventListener('keydown', handleKeyDown);
-      };
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await callAPI.holdCall(activeCallId, 'Agent requested hold');
+      console.log('✅ Call put on hold via API');
+      setShowCallControlsMenu(false);
+    } catch (error: any) {
+      console.error('❌ Failed to put call on hold:', error);
+      setError(error.message || 'Failed to put call on hold');
+      
+      // Fallback to local state change
+      console.log('⚠️ Using fallback hold operation');
+      setShowCallControlsMenu(false);
+    } finally {
+      setIsLoading(false);
     }
-  }, [showTransferDropdown]);
+  }, [activeCallId]);
 
-  // Clear selected agent if it's not in filtered results
-  useEffect(() => {
-    if (selectedAgent && !filteredAgents.find(agent => agent.id === selectedAgent)) {
-      setSelectedAgent('');
+  // Handle hang up with backend integration
+  const handleHangUp = useCallback(async () => {
+    if (!activeCallId) {
+      console.error('No active call ID provided');
+      return;
     }
-  }, [filteredAgents, selectedAgent]);
 
-  // IMPLEMENT LATER: Connect to backend call control system for active call management
-  const handleHold = useCallback(() => {
-    // IMPLEMENT LATER: Put current call on hold
-    // Expected API call:
-    // - POST /api/calls/{callId}/hold
-    // - Payload: { holdReason?: string }
-    // - Response: { success: boolean, callStatus: 'on-hold', holdStartTime: Date }
-    // - Update call status in current session
-    // - WebSocket event: 'call-held'
-    console.log('Putting call on hold...');
-    setShowCallControlsMenu(false);
-  }, []);
+    setIsLoading(true);
+    setError(null);
 
-  const handleHangUp = useCallback(() => {
-    // IMPLEMENT LATER: End current call
-    // Expected API call:
-    // - POST /api/calls/{callId}/end
-    // - Payload: { endReason: 'agent_hangup', callSummary?: string }
-    // - Response: { success: boolean, callId: string, endedAt: Date }
-    // - Update call status in database
-    // - Clean up real-time connections (WebSocket, WebRTC)
-    console.log('Hanging up call...');
-    setShowCallControlsMenu(false);
-  }, []);
+    try {
+      await callAPI.endCall(activeCallId, 'agent_hangup');
+      console.log('✅ Call ended via API');
+      setShowCallControlsMenu(false);
+    } catch (error: any) {
+      console.error('❌ Failed to end call:', error);
+      setError(error.message || 'Failed to end call');
+      
+      // Fallback to local state change
+      console.log('⚠️ Using fallback hang up operation');
+      setShowCallControlsMenu(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeCallId]);
 
+  // Handle transfer with backend integration
   const handleTransfer = useCallback(() => {
     // Show transfer dropdown instead of closing menu
     setShowTransferDropdown(true);
     setShowCallControlsMenu(false);
   }, []);
 
-  const handleConfirmTransfer = useCallback(() => {
-    if (!selectedAgent) return;
-    
-    // IMPLEMENT LATER: Execute call transfer to selected agent
-    console.log(`Transferring call to agent: ${selectedAgent}...`);
-    setShowTransferDropdown(false);
-    setSelectedAgent('');
-    setAgentSearchQuery('');
-    setShowCallControlsMenu(false);
-  }, [selectedAgent]);
+  // Handle confirm transfer with backend integration
+  const handleConfirmTransfer = useCallback(async () => {
+    if (!selectedAgent || !activeCallId) {
+      console.error('No agent selected or no active call ID');
+      return;
+    }
 
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await callAPI.transferCall(activeCallId, selectedAgent, 'Agent requested transfer');
+      console.log('✅ Call transferred via API to agent:', selectedAgent);
+      
+      setShowTransferDropdown(false);
+      setSelectedAgent('');
+      setAgentSearchQuery('');
+      setShowCallControlsMenu(false);
+    } catch (error: any) {
+      console.error('❌ Failed to transfer call:', error);
+      setError(error.message || 'Failed to transfer call');
+      
+      // Fallback to local state change
+      console.log('⚠️ Using fallback transfer operation');
+      setShowTransferDropdown(false);
+      setSelectedAgent('');
+      setAgentSearchQuery('');
+      setShowCallControlsMenu(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedAgent, activeCallId]);
+
+  // Handle cancel transfer
   const handleCancelTransfer = useCallback(() => {
     setShowTransferDropdown(false);
     setSelectedAgent('');
     setAgentSearchQuery('');
   }, []);
 
+  // Toggle call controls menu
   const toggleCallControls = useCallback(() => {
     setShowCallControlsMenu(!showCallControlsMenu);
   }, [showCallControlsMenu]);
 
+  // Handle agent selection for transfer
+  const handleAgentSelect = useCallback((agentId: string) => {
+    setSelectedAgent(agentId);
+  }, []);
+
+  // Handle agent search
+  const handleAgentSearch = useCallback((query: string) => {
+    setAgentSearchQuery(query);
+  }, []);
+
+  // Clear error
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
   return {
+    // State
     showCallControlsMenu,
     showTransferDropdown,
     selectedAgent,
     agentSearchQuery,
+    isLoading,
+    error,
+    
+    // Available agents
+    availableAgents,
     filteredAgents,
-    setSelectedAgent,
-    setAgentSearchQuery,
+    
+    // Actions
     handleHold,
     handleHangUp,
     handleTransfer,
     handleConfirmTransfer,
     handleCancelTransfer,
-    toggleCallControls
+    toggleCallControls,
+    handleAgentSelect,
+    handleAgentSearch,
+    clearError,
   };
 };

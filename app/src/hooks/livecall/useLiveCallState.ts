@@ -7,32 +7,16 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { CallSession } from '@/types/livecall';
+import { callAPI } from '@/services/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
-// Mock data for call sessions
-const mockCallSessions: CallSession[] = [
-  {
-    callId: "call-001",
-    tabId: "tab-1",
-    tabLabel: "Customer Support #1",
-    participantInfo: { agent: "Agent Smith", customer: "John Doe", customerPhone: "+1 (555) 123-4567" },
-    callStatus: 'active',
-    callStartTime: new Date(Date.now() - 204000), // 3:24 ago
-    isActive: true
-  },
-  {
-    callId: "call-002", 
-    tabId: "tab-2",
-    tabLabel: "Technical Support #2",
-    participantInfo: { agent: "Agent Smith", customer: "Jane Smith", customerPhone: "+1 (555) 987-6543" },
-    callStatus: 'on-hold',
-    callStartTime: new Date(Date.now() - 600000), // 10 minutes ago
-    isActive: false
-  }
-];
-
+// No mock data - start with empty call sessions
 export const useLiveCallState = () => {
-  const [callSessions, setCallSessions] = useState<CallSession[]>(mockCallSessions);
-  const [activeTabId, setActiveTabId] = useState('tab-1');
+  const { user } = useAuth();
+  const [callSessions, setCallSessions] = useState<CallSession[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Check for pending call tab from incoming calls
   // IMPLEMENT LATER: Replace with real-time WebSocket events
@@ -56,49 +40,96 @@ export const useLiveCallState = () => {
   const activeCallSession = callSessions.find(session => session.tabId === activeTabId);
   const hasActiveCall = activeCallSession?.callStatus === 'active';
 
-  // IMPLEMENT LATER: Tab management functions with backend integration
-  const createNewCallTab = useCallback(() => {
-    // Expected API call:
-    // - POST /api/calls/sessions/create
-    // - Payload: { agentId: string, sessionType: 'outbound' | 'inbound' | 'transfer' }
-    // - Response: { sessionId: string, tabId: string, callId: string }
-    // - WebSocket event: 'new-session-created'
-    
-    const newTabId = `tab-${Date.now()}`;
-    const newSession: CallSession = {
-      callId: `call-${Date.now()}`,
-      tabId: newTabId,
-      tabLabel: `New Call #${callSessions.length + 1}`,
-      participantInfo: { agent: "Agent Smith", customer: "New Customer", customerPhone: "" },
-      callStatus: 'connecting',
-      callStartTime: new Date(),
-      isActive: false
-    };
-    
-    setCallSessions(prev => [...prev, newSession]);
-    setActiveTabId(newTabId);
-    console.log('New call tab created:', newSession);
-  }, [callSessions.length]);
+  // Create new call tab with backend integration
+  const createNewCallTab = useCallback(async () => {
+    if (!user?.id) {
+      console.error('No authenticated user found');
+      return;
+    }
 
-  const switchToTab = useCallback((tabId: string) => {
-    // IMPLEMENT LATER: Save current tab state before switching
-    // Expected API call:
-    // - PUT /api/calls/sessions/{currentSessionId}/save-state
-    // - PUT /api/calls/sessions/{newSessionId}/activate
-    // - WebSocket event: 'session-switched'
-    
-    setActiveTabId(tabId);
-    console.log('Switched to tab:', tabId);
-  }, []);
+    setIsLoading(true);
+    setError(null);
 
-  const closeCallTab = useCallback((tabId: string) => {
-    // IMPLEMENT LATER: End call session and cleanup
-    // Expected API call:
-    // - POST /api/calls/sessions/{sessionId}/end
-    // - Payload: { endReason: 'agent_closed', callSummary?: string }
-    // - Response: { success: boolean, endedAt: Date }
-    // - WebSocket event: 'session-ended'
-    
+    try {
+      // Create call session via API
+      const sessionResult = await callAPI.createCallSession({
+        agentId: user.id,
+        sessionType: 'outbound',
+        priority: 'medium'
+      });
+
+      const newSession: CallSession = {
+        callId: sessionResult.callId,
+        tabId: sessionResult.tabId,
+        tabLabel: `New Call #${callSessions.length + 1}`,
+        participantInfo: { 
+          agent: user.name || "Agent", 
+          customer: "New Customer", 
+          customerPhone: "" 
+        },
+        callStatus: 'connecting',
+        callStartTime: new Date(),
+        isActive: false
+      };
+      
+      setCallSessions(prev => [...prev, newSession]);
+      setActiveTabId(newSession.tabId);
+      console.log('✅ New call tab created via API:', newSession);
+    } catch (error: any) {
+      console.error('❌ Failed to create call session:', error);
+      setError(error.message || 'Failed to create call session');
+      
+      // Fallback to mock creation
+      const fallbackTabId = `tab-${Date.now()}`;
+      const fallbackSession: CallSession = {
+        callId: `call-${Date.now()}`,
+        tabId: fallbackTabId,
+        tabLabel: `New Call #${callSessions.length + 1}`,
+        participantInfo: { agent: user.name || "Agent", customer: "New Customer", customerPhone: "" },
+        callStatus: 'connecting',
+        callStartTime: new Date(),
+        isActive: false
+      };
+      
+      setCallSessions(prev => [...prev, fallbackSession]);
+      setActiveTabId(fallbackTabId);
+      console.log('⚠️ Using fallback call tab creation:', fallbackSession);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [callSessions.length, user]);
+
+  // Switch to tab with backend activation
+  const switchToTab = useCallback(async (tabId: string) => {
+    const targetSession = callSessions.find(session => session.tabId === tabId);
+    if (!targetSession) {
+      console.error('Target session not found:', tabId);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Activate the call session via API
+      await callAPI.activateCallSession(targetSession.callId);
+      
+      setActiveTabId(tabId);
+      console.log('✅ Switched to tab via API:', tabId);
+    } catch (error: any) {
+      console.error('❌ Failed to activate call session:', error);
+      setError(error.message || 'Failed to activate call session');
+      
+      // Fallback to local switch
+      setActiveTabId(tabId);
+      console.log('⚠️ Using fallback tab switch:', tabId);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [callSessions]);
+
+  // Close call tab with backend cleanup
+  const closeCallTab = useCallback(async (tabId: string) => {
     const sessionToClose = callSessions.find(session => session.tabId === tabId);
     if (!sessionToClose) return;
 
@@ -108,21 +139,48 @@ export const useLiveCallState = () => {
       if (!confirmed) return;
     }
 
-    // Remove the session
-    setCallSessions(prev => prev.filter(session => session.tabId !== tabId));
-    
-    // Switch to another tab if closing the active one
-    if (tabId === activeTabId) {
-      const remainingSessions = callSessions.filter(session => session.tabId !== tabId);
-      if (remainingSessions.length > 0) {
-        setActiveTabId(remainingSessions[0].tabId);
-      } else {
-        // Create a new default tab if no sessions remain
-        createNewCallTab();
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // End call session via API
+      await callAPI.endCallSession(sessionToClose.callId, 'agent_closed');
+      
+      // Remove the session locally
+      setCallSessions(prev => prev.filter(session => session.tabId !== tabId));
+      
+      // Switch to another tab if closing the active one
+      if (tabId === activeTabId) {
+        const remainingSessions = callSessions.filter(session => session.tabId !== tabId);
+        if (remainingSessions.length > 0) {
+          setActiveTabId(remainingSessions[0].tabId);
+        } else {
+          // No tabs remain, set activeTabId to null
+          setActiveTabId(null);
+        }
       }
+      
+      console.log('✅ Call tab closed via API:', tabId);
+    } catch (error: any) {
+      console.error('❌ Failed to end call session:', error);
+      setError(error.message || 'Failed to end call session');
+      
+      // Fallback to local cleanup
+      setCallSessions(prev => prev.filter(session => session.tabId !== tabId));
+      
+      if (tabId === activeTabId) {
+        const remainingSessions = callSessions.filter(session => session.tabId !== tabId);
+        if (remainingSessions.length > 0) {
+          setActiveTabId(remainingSessions[0].tabId);
+        } else {
+          setActiveTabId(null);
+        }
+      }
+      
+      console.log('⚠️ Using fallback tab close:', tabId);
+    } finally {
+      setIsLoading(false);
     }
-    
-    console.log('Call tab closed:', tabId);
   }, [callSessions, activeTabId, createNewCallTab]);
 
   return {
@@ -130,6 +188,8 @@ export const useLiveCallState = () => {
     activeTabId,
     activeCallSession,
     hasActiveCall,
+    isLoading,
+    error,
     createNewCallTab,
     switchToTab,
     closeCallTab
