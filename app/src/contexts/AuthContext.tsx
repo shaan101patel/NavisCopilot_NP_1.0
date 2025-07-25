@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useDispatch } from 'react-redux';
+import type { AppDispatch } from '../store';
+import { setUser as setReduxUser, logout as logoutUser, setLoading } from '../store/userSlice';
 import { authAPI, LoginRequest, LoginResponse } from '../services/supabase';
 
 // Update app/src/contexts/AuthContext.tsx
@@ -7,7 +10,7 @@ interface User {
   email: string;      // Now stored in profiles
   name: string;       // Renamed from full_name
   role: 'agent' | 'supervisor' | 'admin';  // Updated enum
-  phone?: string;     // Renamed from phone_number
+  phone_number?: string;     // Renamed from phone_number (to match Redux type)
   avatar?: string;    // New field
   bio?: string;       // New field
   department?: string; // New field
@@ -44,8 +47,36 @@ const TOKEN_KEY = 'navis-auth-tokens';
 const USER_KEY = 'navis-user';
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const dispatch = useDispatch<AppDispatch>();
+  const [user, setUserState] = useState<User | null>(null);
+  const [isLoading, setIsLoadingState] = useState(true);
+
+  // Sync user state with Redux
+  const setUser = (userData: User | null) => {
+    console.log('🔐 AuthContext: Setting user state:', userData);
+    setUserState(userData);
+    if (userData) {
+      // Convert user data to match Redux User interface
+      const reduxUser = {
+        id: userData.id,
+        name: userData.name,
+        phone_number: userData.phone_number || '',
+        email: userData.email,
+        role: userData.role === 'supervisor' ? 'admin' : userData.role as 'agent' | 'admin', // Map supervisor to admin for Redux
+        avatar: userData.avatar,
+      };
+      console.log('🔐 AuthContext: Dispatching Redux user:', reduxUser);
+      dispatch(setReduxUser(reduxUser));
+    } else {
+      console.log('🔐 AuthContext: Logging out user from Redux');
+      dispatch(logoutUser());
+    }
+  };
+
+  const setIsLoading = (loading: boolean) => {
+    setIsLoadingState(loading);
+    dispatch(setLoading(loading));
+  };
 
   // Load user from localStorage on app start
   useEffect(() => {

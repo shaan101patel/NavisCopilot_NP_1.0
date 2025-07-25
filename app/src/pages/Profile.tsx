@@ -1,7 +1,12 @@
-import { useSelector } from 'react-redux'
+import { useState } from 'react'
+import { useSelector, useDispatch } from 'react-redux'
 import { RootState } from '@/store'
+import { setUser } from '@/store/userSlice'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Modal } from '@/components/ui/modal'
+import { profileAPI } from '@/services/supabase'
 
 // Icons
 const UserIcon = () => (
@@ -28,8 +33,29 @@ const BadgeIcon = () => (
   </svg>
 )
 
+const CameraIcon = () => (
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+)
+
 export default function Profile() {
   const { user } = useSelector((state: RootState) => state.user)
+  const dispatch = useDispatch()
+
+  // State for edit modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    full_name: user?.name || '',
+    department: '',
+    title: '',
+    phone_number: user?.phone_number || '',
+  })
 
   if (!user) {
     return (
@@ -58,12 +84,72 @@ export default function Profile() {
     return role.charAt(0).toUpperCase() + role.slice(1)
   }
 
+  const handleEditProfile = () => {
+    setFormData({
+      full_name: user.name,
+      department: '',
+      title: '',
+      phone_number: user.phone_number || '',
+    })
+    setIsEditModalOpen(true)
+  }
+
+  const handleSaveProfile = async () => {
+    if (!formData.full_name) {
+      alert('Full name is required')
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const result = await profileAPI.updateProfile(formData)
+      
+      // Update Redux store with new user data
+      dispatch(setUser({
+        ...user,
+        name: formData.full_name,
+        phone_number: formData.phone_number,
+      }))
+
+      alert('Profile updated successfully!')
+      setIsEditModalOpen(false)
+    } catch (error: any) {
+      console.error('Profile update error:', error)
+      alert(error.message || 'Failed to update profile')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setAvatarUploading(true)
+    try {
+      const result = await profileAPI.uploadAvatar(file)
+      
+      // Update Redux store with new avatar
+      dispatch(setUser({
+        ...user,
+        avatar: result.avatar_url,
+      }))
+
+      alert('Avatar uploaded successfully!')
+    } catch (error: any) {
+      console.error('Avatar upload error:', error)
+      alert(error.message || 'Failed to upload avatar')
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
+
   return (
     <div className="p-6">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button variant="outline" className="flex items-center gap-2" onClick={handleEditProfile}>
             <EditIcon />
             Edit Profile
           </Button>
@@ -73,7 +159,7 @@ export default function Profile() {
           {/* Profile Picture and Basic Info */}
           <Card className="p-6">
             <div className="text-center">
-              <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-primary text-white text-xl font-bold">
+              <div className="relative mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-primary text-white text-xl font-bold">
                 {user.avatar ? (
                   <img
                     src={user.avatar}
@@ -82,6 +168,24 @@ export default function Profile() {
                   />
                 ) : (
                   getInitials(user.name)
+                )}
+                
+                {/* Avatar upload button */}
+                <label className="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow-lg border cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                    disabled={avatarUploading}
+                  />
+                  <CameraIcon />
+                </label>
+                
+                {avatarUploading && (
+                  <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  </div>
                 )}
               </div>
               <h2 className="text-xl font-semibold text-gray-900">{user.name}</h2>
@@ -153,6 +257,80 @@ export default function Profile() {
             </Card>
           </div>
         </div>
+
+        {/* Edit Profile Modal */}
+        <Modal
+          open={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+        >
+          <h2 className="text-lg font-semibold mb-4">Edit Profile</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Full Name *
+              </label>
+              <Input
+                type="text"
+                value={formData.full_name}
+                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                placeholder="Enter your full name"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Department
+              </label>
+              <Input
+                type="text"
+                value={formData.department}
+                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                placeholder="Enter your department"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Job Title
+              </label>
+              <Input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Enter your job title"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Phone Number
+              </label>
+              <Input
+                type="tel"
+                value={formData.phone_number}
+                onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                placeholder="Enter your phone number"
+              />
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button 
+                onClick={handleSaveProfile} 
+                disabled={isLoading}
+                className="flex-1"
+              >
+                {isLoading ? 'Saving...' : 'Save Changes'}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditModalOpen(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </div>
   )

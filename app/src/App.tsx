@@ -21,6 +21,7 @@ import ExternalConnections from "@/pages/ExternalConnections";
 import Admin from "@/pages/Admin";
 import Today from "@/pages/Today";
 import Notifications from "@/pages/Notifications";
+import InboundNumbers from "@/pages/InboundNumbers";
 
 function App() {
   return (
@@ -173,6 +174,16 @@ function App() {
                   <AdminRoute>
                     <MainLayout>
                       <Admin />
+                    </MainLayout>
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/inbound-numbers"
+                element={
+                  <AdminRoute>
+                    <MainLayout>
+                      <InboundNumbers />
                     </MainLayout>
                   </AdminRoute>
                 }

@@ -24,6 +24,7 @@ const ReduxExample: React.FC = () => {
     dispatch(userActions.setUser({
       id: '1',
       name: 'John Agent',
+      phone_number: "333-333-3333",
       email: 'john@navis.com',
       role: 'agent'
     }));

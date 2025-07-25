@@ -445,38 +445,188 @@ export const profileAPI = {
     return data;
   },
 
-  // PUT /api/users/{id} - Update user profile
-  async updateProfile(userId: string, updates: Partial<User>) {
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({
-        full_name: updates.name,
-        phone_number: updates.phone,
-        updated_at: new Date().toISOString(),
-        ...updates
-      })
-      .eq('id', userId)
-      .select()
-      .single();
-    
-    if (error) throw error;
+  // PUT /api/users/{id} - Update user profile using Edge Function
+  async updateProfile(updates: {
+    full_name?: string;
+    department?: string;
+    title?: string;
+    phone_number?: string;
+    avatar?: string;
+  }) {
+    const session = await supabase.auth.getSession();
+    if (!session.data.session) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/update-profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.data.session.access_token}`,
+      },
+      body: JSON.stringify(updates),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to update profile');
+    }
+
     return data;
   },
 
-  // GET /api/users/{id}/settings - Get user preferences
-  async getUserSettings(userId: string) {
-    // Add user_settings table or use JSONB in profiles
+  // GET /api/users/{id}/settings - Get user preferences using Edge Function
+  async getUserSettings() {
+    const session = await supabase.auth.getSession();
+    if (!session.data.session) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/update-user-settings`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.data.session.access_token}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to fetch settings');
+    }
+
+    return data.settings;
   },
 
-  // PUT /api/users/{id}/settings - Update user settings
-  async updateUserSettings(userId: string, settings: Settings) {
-    // Save to user_settings table or profiles.preferences JSONB
+  // PUT /api/users/{id}/settings - Update user settings using Edge Function
+  async updateUserSettings(settings: {
+    notifications?: {
+      email?: boolean;
+      push?: boolean;
+      callReminders?: boolean;
+      ticketUpdates?: boolean;
+      systemAlerts?: boolean;
+      messages?: boolean;
+    };
+    preferences?: {
+      theme?: string;
+      language?: string;
+      timezone?: string;
+      autoSave?: boolean;
+      soundEffects?: boolean;
+      keyboardShortcuts?: boolean;
+    };
+    security?: {
+      sessionTimeout?: number;
+      twoFactorEnabled?: boolean;
+    };
+    ui_preferences?: {
+      notesViewMode?: string;
+      defaultCallView?: string;
+      sidebarCollapsed?: boolean;
+    };
+  }) {
+    const session = await supabase.auth.getSession();
+    if (!session.data.session) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/update-user-settings`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.data.session.access_token}`,
+      },
+      body: JSON.stringify(settings),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to update settings');
+    }
+
+    return data;
   },
 
-  // GET /api/users/{id}/inbound-numbers - Get agent's phone numbers
-  async getInboundNumbers(userId: string) {
-    // Query inbound_numbers table or similar
-  }
+  // POST /api/users/upload-avatar - Upload avatar using Edge Function
+  async uploadAvatar(file: File) {
+    const session = await supabase.auth.getSession();
+    if (!session.data.session) {
+      throw new Error('Not authenticated');
+    }
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/upload-avatar`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.data.session.access_token}`,
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to upload avatar');
+    }
+
+    return data;
+  },
+
+  // GET /api/inbound-numbers - Get agent inbound numbers
+  async getInboundNumbers() {
+    const session = await supabase.auth.getSession();
+    if (!session.data.session) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/manage-inbound-numbers`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.data.session.access_token}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to fetch inbound numbers');
+    }
+
+    return data.agents;
+  },
+
+  // PUT /api/inbound-numbers - Update agent phone number
+  async updateInboundNumber(agentId: string, phoneNumber: string | null) {
+    const session = await supabase.auth.getSession();
+    if (!session.data.session) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/manage-inbound-numbers`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.data.session.access_token}`,
+      },
+      body: JSON.stringify({
+        agent_id: agentId,
+        phone_number: phoneNumber,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to update phone number');
+    }
+
+    return data;
+  },
 };
 
 export default supabase;
