@@ -138,11 +138,38 @@ export const TicketDetailsView: React.FC<TicketDetailsViewProps> = ({
     await handleCopyText(fullTranscript, 'full-transcript');
   };
 
-  const handleGenerateAiSummary = () => {
-    // IMPLEMENT LATER: Call AI service to generate call summary
-    // Expected API: POST /api/ai/generate-summary
-    // Payload: { callId: string, transcriptData: TranscriptLine[] }
-    setCallSummary('AI-generated summary will be implemented with backend integration. This would contain a comprehensive overview of the call, key points discussed, resolution provided, and follow-up actions needed.');
+  const handleGenerateAiSummary = async () => {
+    if (!ticket.callId) {
+      setCallSummary('No call data available for this ticket.');
+      return;
+    }
+
+    try {
+      // Get transcript data (you may need to modify this based on available data)
+      const transcriptData = mockTranscript.map(line => ({
+        id: line.id,
+        speaker: line.speaker,
+        text: line.text,
+        timestamp: new Date(line.timestamp)
+      }));
+
+      // Call AI service to generate call summary
+      const { callAPI } = await import('@/services/supabase');
+      const response = await callAPI.generateAiSummary({
+        callId: ticket.callId,
+        transcript: transcriptData,
+        summaryType: 'detailed'
+      });
+
+      if (response.success) {
+        setCallSummary(response.summary);
+      } else {
+        setCallSummary('Failed to generate AI summary. Please try again.');
+      }
+    } catch (error) {
+      console.error('Failed to generate AI summary:', error);
+      setCallSummary('Error generating AI summary. Please try again later.');
+    }
   };
 
   const getPriorityColor = (priority: string) => {

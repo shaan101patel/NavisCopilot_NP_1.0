@@ -67,9 +67,9 @@ export const useLiveCallState = () => {
           customer: "New Customer", 
           customerPhone: "" 
         },
-        callStatus: 'connecting',
+        callStatus: 'active', // Set to active immediately for demo purposes
         callStartTime: new Date(),
-        isActive: false
+        isActive: true
       };
       
       setCallSessions(prev => [...prev, newSession]);
@@ -86,9 +86,9 @@ export const useLiveCallState = () => {
         tabId: fallbackTabId,
         tabLabel: `New Call #${callSessions.length + 1}`,
         participantInfo: { agent: user.name || "Agent", customer: "New Customer", customerPhone: "" },
-        callStatus: 'connecting',
+        callStatus: 'active', // Set to active immediately for demo purposes
         callStartTime: new Date(),
-        isActive: false
+        isActive: true
       };
       
       setCallSessions(prev => [...prev, fallbackSession]);

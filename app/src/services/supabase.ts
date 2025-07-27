@@ -1089,14 +1089,14 @@ export const callAPI = {
   },
 
   /**
-   * Get complete call transcript
+   * Get complete call transcript from calls table
    * GET /api/calls/{id}/transcript
    */
-  async getCallTranscript(callId: string): Promise<{
+  async getCallTranscriptFromCalls(callId: string): Promise<{
     callId: string;
     transcript: any[];
   }> {
-    console.log('📝 Fetching call transcript:', callId);
+    console.log('📝 Fetching call transcript from calls table:', callId);
     
     try {
       const { data: callData, error: callError } = await supabase
@@ -1122,5 +1122,694 @@ export const callAPI = {
     }
   },
 
+  /**
+   * Send message to AI assistant
+   * POST /api/ai/chat
+   */
+  async sendAiChatMessage(messageData: {
+    callId: string;
+    message: string;
+    responseLevel: 'instant' | 'quick' | 'immediate';
+    context?: {
+      transcript?: any[];
+      notes?: any[];
+      customerInfo?: any;
+    };
+  }): Promise<{
+    success: boolean;
+    response: string;
+    suggestions?: string[];
+    confidence: number;
+    responseId: string;
+  }> {
+    console.log('🤖 Sending AI chat message for call:', messageData.callId);
+    
+    try {
+      // Store the agent's message in the database
+      const { data: agentMessage, error: agentMessageError } = await supabase
+        .from('ai_chat_messages')
+        .insert({
+          call_id: messageData.callId,
+          content: messageData.message,
+          sender: 'agent',
+          ai_response_level: messageData.responseLevel,
+        })
+        .select()
+        .single();
 
+      if (agentMessageError) {
+        console.error('❌ Agent message storage error:', agentMessageError);
+        throw new Error(agentMessageError.message || 'Failed to store agent message');
+      }
+
+      // Simulate AI processing (In production, this would call an AI service)
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Generate AI response based on message content and level
+      let aiResponse = '';
+      let suggestions: string[] = [];
+      let confidence = 0.85;
+
+      const messageText = messageData.message.toLowerCase();
+      
+      // Context-aware responses based on message content
+      if (messageText.includes('refund') || messageText.includes('return')) {
+        if (messageData.responseLevel === 'instant') {
+          aiResponse = "Check our refund policy: 30-day returns for most items.";
+        } else if (messageData.responseLevel === 'quick') {
+          aiResponse = "For refund requests, verify the purchase date and item condition. Our standard policy allows 30-day returns. Check if customer is within the window and item meets return criteria.";
+          suggestions = [
+            "Ask for order number",
+            "Verify purchase date", 
+            "Check return policy exceptions"
+          ];
+        } else {
+          aiResponse = "REFUND REQUEST ANALYSIS:\n\n1. **Policy Check**: Standard 30-day return window\n2. **Verification**: Confirm order number and purchase date\n3. **Condition**: Item must be unused/original packaging\n4. **Exceptions**: Electronics have 14-day window\n5. **Next Steps**: If eligible, initiate return label\n\nRECOMMENDED APPROACH: Start with empathy, then verify eligibility before explaining process.";
+          suggestions = [
+            "Express understanding of frustration",
+            "Request order details for verification",
+            "Explain step-by-step return process",
+            "Offer expedited processing if customer is VIP"
+          ];
+          confidence = 0.92;
+        }
+      } else if (messageText.includes('billing') || messageText.includes('charge')) {
+        if (messageData.responseLevel === 'instant') {
+          aiResponse = "Help customer understand their billing. Ask for account details.";
+        } else if (messageData.responseLevel === 'quick') {
+          aiResponse = "For billing inquiries, verify the customer's identity first, then review their recent charges. Look for any recurring subscriptions or recent purchases that might explain the charge.";
+          suggestions = [
+            "Verify account ownership",
+            "Review recent transactions",
+            "Check for recurring charges"
+          ];
+        } else {
+          aiResponse = "BILLING INQUIRY WORKFLOW:\n\n1. **Identity Verification**: Confirm last 4 digits of payment method\n2. **Account Review**: Check recent transactions (last 3 months)\n3. **Charge Analysis**: Look for recurring subscriptions, trial conversions\n4. **Resolution Path**: Dispute if unauthorized, explain if legitimate\n\nCOMMON CAUSES:\n- Trial period ending\n- Annual subscription renewal\n- Family member purchases\n- Forgotten subscription";
+          suggestions = [
+            "Ask for specific charge amount and date",
+            "Verify payment method on file",
+            "Review subscription status",
+            "Explain charge if legitimate, dispute if unauthorized"
+          ];
+          confidence = 0.89;
+        }
+      } else if (messageText.includes('technical') || messageText.includes('not working')) {
+        if (messageData.responseLevel === 'instant') {
+          aiResponse = "Start with basic troubleshooting steps.";
+        } else {
+          aiResponse = "TECHNICAL SUPPORT PROTOCOL:\n\n1. **Problem Identification**: Get specific error messages\n2. **Basic Troubleshooting**: Restart, update, check connections\n3. **Advanced Steps**: Clear cache, reinstall if needed\n4. **Escalation**: Technical team if hardware issue\n\nGather device info, OS version, and exact error messages.";
+          suggestions = [
+            "Ask for device model and OS version",
+            "Request screenshot of error",
+            "Guide through restart process",
+            "Escalate to technical team if needed"
+          ];
+          confidence = 0.88;
+        }
+      } else {
+        // Generic responses
+        if (messageData.responseLevel === 'instant') {
+          aiResponse = "I'm here to help. What specific issue is the customer experiencing?";
+        } else if (messageData.responseLevel === 'quick') {
+          aiResponse = "For general inquiries, start by understanding the customer's main concern. Use active listening and ask clarifying questions to provide the most relevant assistance.";
+          suggestions = [
+            "Ask clarifying questions",
+            "Listen actively to customer needs",
+            "Offer specific solutions"
+          ];
+        } else {
+          aiResponse = "GENERAL CUSTOMER SERVICE APPROACH:\n\n1. **Active Listening**: Let customer fully explain their situation\n2. **Empathy**: Acknowledge their frustration or concern\n3. **Clarification**: Ask specific questions to understand the issue\n4. **Solution-Focused**: Offer concrete next steps\n5. **Follow-up**: Ensure customer satisfaction\n\nRemember to maintain a positive, helpful tone throughout the interaction.";
+          suggestions = [
+            "Show empathy and understanding",
+            "Ask specific clarifying questions",
+            "Provide clear next steps",
+            "Confirm customer satisfaction"
+          ];
+          confidence = 0.82;
+        }
+      }
+
+      // Store AI response in database
+      const { data: aiResponseMessage, error: aiResponseError } = await supabase
+        .from('ai_chat_messages')
+        .insert({
+          call_id: messageData.callId,
+          content: aiResponse,
+          sender: 'ai',
+          ai_response_level: messageData.responseLevel,
+        })
+        .select()
+        .single();
+
+      if (aiResponseError) {
+        console.error('❌ AI response storage error:', aiResponseError);
+        // Continue despite storage error - return response anyway
+      }
+
+      console.log('✅ AI chat message processed successfully');
+
+      return {
+        success: true,
+        response: aiResponse,
+        suggestions,
+        confidence,
+        responseId: aiResponseMessage?.id || `ai-response-${Date.now()}`
+      };
+    } catch (error: any) {
+      console.error('❌ AI chat message failed:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Generate AI call summary
+   * POST /api/ai/generate-summary
+   */
+  async generateAiSummary(summaryData: {
+    callId: string;
+    transcript: any[];
+    notes?: any[];
+    customerInfo?: any;
+    summaryType?: 'brief' | 'detailed' | 'action_items';
+  }): Promise<{
+    success: boolean;
+    summary: string;
+    keyPoints: string[];
+    actionItems: string[];
+    sentiment: 'positive' | 'neutral' | 'negative';
+    summaryId: string;
+  }> {
+    console.log('📝 Generating AI summary for call:', summaryData.callId);
+    
+    try {
+      // Simulate AI processing time
+      await new Promise(resolve => setTimeout(resolve, 1200));
+
+      const summaryType = summaryData.summaryType || 'detailed';
+      const transcript = summaryData.transcript || [];
+      const notes = summaryData.notes || [];
+
+      // Analyze transcript for key themes and sentiment
+      const transcriptText = transcript.map(t => t.text || t.content || '').join(' ').toLowerCase();
+      
+      // Determine sentiment based on transcript content
+      let sentiment: 'positive' | 'neutral' | 'negative' = 'neutral';
+      const positiveWords = ['thank', 'great', 'perfect', 'excellent', 'helpful', 'appreciate', 'satisfied'];
+      const negativeWords = ['problem', 'issue', 'frustrated', 'angry', 'terrible', 'awful', 'disappointed'];
+      
+      const positiveCount = positiveWords.filter(word => transcriptText.includes(word)).length;
+      const negativeCount = negativeWords.filter(word => transcriptText.includes(word)).length;
+      
+      if (positiveCount > negativeCount && positiveCount > 1) {
+        sentiment = 'positive';
+      } else if (negativeCount > positiveCount && negativeCount > 1) {
+        sentiment = 'negative';
+      }
+
+      // Generate summary based on type and content
+      let summary = '';
+      let keyPoints: string[] = [];
+      let actionItems: string[] = [];
+
+      if (summaryType === 'brief') {
+        if (transcriptText.includes('refund') || transcriptText.includes('return')) {
+          summary = 'Customer contacted regarding a refund request. Issue was resolved by following standard return policy procedures.';
+          keyPoints = ['Refund request', 'Policy review', 'Resolution provided'];
+          actionItems = ['Process return if eligible', 'Send return label'];
+        } else if (transcriptText.includes('billing') || transcriptText.includes('charge')) {
+          summary = 'Customer inquiry about billing charges. Account was reviewed and charges were explained.';
+          keyPoints = ['Billing inquiry', 'Account review', 'Charges explained'];
+          actionItems = ['Follow up on any disputed charges'];
+        } else {
+          summary = 'Customer service call completed. Customer issue was addressed and resolved.';
+          keyPoints = ['Customer contacted support', 'Issue addressed', 'Resolution provided'];
+          actionItems = ['Follow up if needed'];
+        }
+      } else if (summaryType === 'action_items') {
+        summary = 'Action items identified from customer call:';
+        if (transcriptText.includes('refund')) {
+          actionItems = [
+            'Verify return eligibility (30-day window)',
+            'Process return authorization',
+            'Send prepaid return label',
+            'Initiate refund once item received'
+          ];
+        } else if (transcriptText.includes('technical')) {
+          actionItems = [
+            'Escalate to technical support team',
+            'Schedule follow-up call in 24 hours',
+            'Send troubleshooting guide via email'
+          ];
+        } else {
+          actionItems = [
+            'Follow up with customer within 24 hours',
+            'Document resolution in customer record',
+            'Update internal knowledge base if needed'
+          ];
+        }
+        keyPoints = ['Call completed', 'Next steps identified'];
+      } else {
+        // Detailed summary
+        if (transcriptText.includes('refund') || transcriptText.includes('return')) {
+          summary = `CALL SUMMARY - REFUND REQUEST
+
+**Customer Issue**: Customer requested a refund for a recent purchase due to [specific reason would be extracted from transcript].
+
+**Resolution Process**:
+1. Verified customer identity and order details
+2. Reviewed return policy and eligibility (30-day window)
+3. Confirmed item condition and return criteria
+4. Initiated return process with prepaid label
+
+**Outcome**: Customer satisfied with resolution. Return label sent via email. Refund will be processed upon item receipt (3-5 business days).
+
+**Customer Sentiment**: ${sentiment === 'positive' ? 'Customer was understanding and appreciative of the quick resolution' : sentiment === 'negative' ? 'Customer was initially frustrated but became more satisfied as issue was resolved' : 'Customer remained neutral throughout the interaction'}`;
+
+          keyPoints = [
+            'Refund request for recent purchase',
+            'Eligibility confirmed within policy',
+            'Return process initiated successfully',
+            'Customer provided with clear next steps'
+          ];
+          
+          actionItems = [
+            'Process return authorization in system',
+            'Email return shipping label to customer',
+            'Monitor return shipment tracking',
+            'Process refund upon item receipt',
+            'Send confirmation email when refund completed'
+          ];
+        } else if (transcriptText.includes('billing') || transcriptText.includes('charge')) {
+          summary = `CALL SUMMARY - BILLING INQUIRY
+
+**Customer Issue**: Customer contacted regarding unexpected charges on their account.
+
+**Investigation Results**:
+1. Verified customer identity and account access
+2. Reviewed recent billing history and transactions
+3. Identified charge source (subscription renewal/trial conversion)
+4. Explained billing cycle and charge details
+
+**Resolution**: Customer understood the charges after explanation. No dispute necessary.
+
+**Customer Sentiment**: ${sentiment === 'positive' ? 'Customer was satisfied with the explanation' : sentiment === 'negative' ? 'Customer was initially concerned but understood after clarification' : 'Customer accepted the explanation'}`;
+
+          keyPoints = [
+            'Billing inquiry about recent charges',
+            'Account review completed',
+            'Charges explained and justified',
+            'Customer understanding achieved'
+          ];
+          
+          actionItems = [
+            'Update customer communication preferences',
+            'Send detailed billing summary via email',
+            'Schedule reminder for next billing cycle'
+          ];
+        } else {
+          summary = `CALL SUMMARY - GENERAL CUSTOMER SERVICE
+
+**Customer Issue**: Customer contacted support with a general inquiry/concern.
+
+**Service Provided**:
+1. Listened to customer's concerns and questions
+2. Provided relevant information and guidance
+3. Offered appropriate solutions and next steps
+4. Ensured customer satisfaction before call completion
+
+**Outcome**: Customer's questions were answered and issue was resolved to their satisfaction.
+
+**Customer Sentiment**: ${sentiment === 'positive' ? 'Customer was pleased with the service' : sentiment === 'negative' ? 'Customer had concerns but they were addressed' : 'Customer was neutral throughout the interaction'}`;
+
+          keyPoints = [
+            'Customer inquiry addressed',
+            'Information provided',
+            'Appropriate solutions offered',
+            'Customer satisfaction confirmed'
+          ];
+          
+          actionItems = [
+            'Document interaction in customer record',
+            'Follow up if additional questions arise',
+            'Update FAQ if common question identified'
+          ];
+        }
+      }
+
+      // Store summary in database (using ai_insights table or calls table)
+      const { data: callData, error: updateError } = await supabase
+        .from('calls')
+        .update({
+          notes: summary, // Store summary in notes field
+          // Could also store in ai_suggestions field as structured data
+          ai_suggestions: {
+            summary,
+            keyPoints,
+            actionItems,
+            sentiment,
+            summaryType,
+            generatedAt: new Date().toISOString()
+          }
+        })
+        .eq('id', summaryData.callId)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('❌ Summary storage error:', updateError);
+        // Continue despite storage error
+      }
+
+      console.log('✅ AI summary generated successfully');
+
+      return {
+        success: true,
+        summary,
+        keyPoints,
+        actionItems,
+        sentiment,
+        summaryId: `summary-${summaryData.callId}-${Date.now()}`
+      };
+    } catch (error: any) {
+      console.error('❌ AI summary generation failed:', error);
+      throw error;
+    }
+  },
+
+  // ===== CALL-SPECIFIC STATE MANAGEMENT =====
+  
+  /**
+   * Get all notes for a specific call
+   */
+  async getCallNotes(callId: string): Promise<{
+    success: boolean;
+    notes: any[];
+    documentNotes: string;
+  }> {
+    try {
+      console.log('📝 Getting notes for call:', callId);
+      
+      // Get sticky notes
+      const { data: stickyNotes, error: stickyError } = await supabase
+        .from('call_notes')
+        .select('*')
+        .eq('call_id', callId)
+        .eq('note_type', 'sticky')
+        .order('created_at', { ascending: false });
+
+      if (stickyError) {
+        throw new Error(`Failed to get sticky notes: ${stickyError.message}`);
+      }
+
+      // Get document notes
+      const { data: docNotes, error: docError } = await supabase
+        .from('call_notes')
+        .select('*')
+        .eq('call_id', callId)
+        .eq('note_type', 'document')
+        .maybeSingle();
+
+      if (docError) {
+        throw new Error(`Failed to get document notes: ${docError.message}`);
+      }
+
+      const formattedNotes = (stickyNotes || []).map(note => ({
+        id: note.id,
+        content: note.content,
+        color: note.color || 'yellow',
+        createdAt: new Date(note.created_at),
+        updatedAt: note.updated_at ? new Date(note.updated_at) : undefined,
+        position: note.position || { x: 0, y: 0 }
+      }));
+
+      return {
+        success: true,
+        notes: formattedNotes,
+        documentNotes: docNotes?.content || ''
+      };
+    } catch (error: any) {
+      console.error('❌ Failed to get call notes:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create a new note for a specific call
+   */
+  async createCallNote(callId: string, noteData: {
+    content: string;
+    noteType: 'sticky' | 'document';
+    color?: string;
+    position?: { x: number; y: number };
+  }): Promise<{ success: boolean; note: any }> {
+    try {
+      console.log('📝 Creating note for call:', callId);
+      
+      // Get current user from auth
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data: note, error } = await supabase
+        .from('call_notes')
+        .insert({
+          call_id: callId,
+          user_id: user.id,
+          note_type: noteData.noteType,
+          content: noteData.content,
+          color: noteData.color || 'yellow',
+          position: noteData.position || { x: 0, y: 0 }
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to create note: ${error.message}`);
+      }
+
+      return {
+        success: true,
+        note: {
+          id: note.id,
+          content: note.content,
+          color: note.color,
+          createdAt: new Date(note.created_at),
+          position: note.position
+        }
+      };
+    } catch (error: any) {
+      console.error('❌ Failed to create call note:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update a note for a specific call
+   */
+  async updateCallNote(noteId: string, updates: {
+    content?: string;
+    color?: string;
+    position?: { x: number; y: number };
+  }): Promise<{ success: boolean; note: any }> {
+    try {
+      console.log('📝 Updating note:', noteId);
+      
+      const { data: note, error } = await supabase
+        .from('call_notes')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', noteId)
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to update note: ${error.message}`);
+      }
+
+      return {
+        success: true,
+        note: {
+          id: note.id,
+          content: note.content,
+          color: note.color,
+          createdAt: new Date(note.created_at),
+          updatedAt: new Date(note.updated_at),
+          position: note.position
+        }
+      };
+    } catch (error: any) {
+      console.error('❌ Failed to update call note:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a note for a specific call
+   */
+  async deleteCallNote(noteId: string): Promise<{ success: boolean }> {
+    try {
+      console.log('📝 Deleting note:', noteId);
+      
+      const { error } = await supabase
+        .from('call_notes')
+        .delete()
+        .eq('id', noteId);
+
+      if (error) {
+        throw new Error(`Failed to delete note: ${error.message}`);
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('❌ Failed to delete call note:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get AI chat messages for a specific call
+   */
+  async getCallAiChatMessages(callId: string): Promise<{
+    success: boolean;
+    messages: any[];
+  }> {
+    try {
+      console.log('🤖 Getting AI chat messages for call:', callId);
+      
+      const { data: messages, error } = await supabase
+        .from('ai_chat_messages')
+        .select('*')
+        .eq('call_id', callId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        throw new Error(`Failed to get AI chat messages: ${error.message}`);
+      }
+
+      const formattedMessages = (messages || []).map(msg => ({
+        id: msg.id,
+        content: msg.content,
+        sender: msg.sender,
+        timestamp: new Date(msg.timestamp || msg.created_at),
+        aiResponseLevel: msg.ai_response_level,
+        suggestions: msg.suggestions || [],
+        confidence: msg.confidence
+      }));
+
+      return {
+        success: true,
+        messages: formattedMessages
+      };
+    } catch (error: any) {
+      console.error('❌ Failed to get AI chat messages:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get transcript segments for a specific call
+   */
+  async getCallTranscript(callId: string): Promise<{
+    success: boolean;
+    transcript: any[];
+  }> {
+    try {
+      console.log('📝 Getting transcript for call:', callId);
+      
+      const { data: segments, error } = await supabase
+        .from('transcript_segments')
+        .select('*')
+        .eq('call_id', callId)
+        .order('sequence_number', { ascending: true });
+
+      if (error) {
+        throw new Error(`Failed to get transcript: ${error.message}`);
+      }
+
+      const formattedTranscript = (segments || []).map(segment => ({
+        id: segment.segment_id || segment.id,
+        speaker: segment.speaker,
+        text: segment.text,
+        timestamp: new Date(segment.timestamp),
+        confidence: segment.confidence,
+        sentiment: segment.sentiment
+      }));
+
+      return {
+        success: true,
+        transcript: formattedTranscript
+      };
+    } catch (error: any) {
+      console.error('❌ Failed to get call transcript:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Add transcript segment for a specific call
+   */
+  async addCallTranscriptSegment(callId: string, segmentData: {
+    speaker: 'agent' | 'customer';
+    text: string;
+    timestamp?: Date;
+    confidence?: number;
+    sentiment?: 'positive' | 'neutral' | 'negative';
+  }): Promise<{ success: boolean; segment: any }> {
+    try {
+      console.log('📝 Adding transcript segment for call:', callId);
+      
+      // Get next sequence number
+      const { data: existingSegments, error: countError } = await supabase
+        .from('transcript_segments')
+        .select('sequence_number')
+        .eq('call_id', callId)
+        .order('sequence_number', { ascending: false })
+        .limit(1);
+
+      if (countError) {
+        throw new Error(`Failed to get sequence number: ${countError.message}`);
+      }
+
+      const nextSequence = existingSegments && existingSegments.length > 0 
+        ? existingSegments[0].sequence_number + 1 
+        : 1;
+
+      const { data: segment, error } = await supabase
+        .from('transcript_segments')
+        .insert({
+          call_id: callId,
+          segment_id: `segment-${callId}-${nextSequence}`,
+          sequence_number: nextSequence,
+          speaker: segmentData.speaker,
+          text: segmentData.text,
+          timestamp: segmentData.timestamp || new Date(),
+          confidence: segmentData.confidence || 0.95,
+          sentiment: segmentData.sentiment || 'neutral'
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to add transcript segment: ${error.message}`);
+      }
+
+      return {
+        success: true,
+        segment: {
+          id: segment.segment_id,
+          speaker: segment.speaker,
+          text: segment.text,
+          timestamp: new Date(segment.timestamp),
+          confidence: segment.confidence,
+          sentiment: segment.sentiment
+        }
+      };
+    } catch (error: any) {
+      console.error('❌ Failed to add transcript segment:', error);
+      throw error;
+    }
+  },
 }; 

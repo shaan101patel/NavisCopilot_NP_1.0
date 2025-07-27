@@ -9,7 +9,7 @@
 export { CallTabs } from './CallTabs';
 export { CallControls } from './CallControls';
 export { TranscriptArea } from './TranscriptArea';
-export { NotesArea, NotesHeader } from './NotesArea';
+export { NotesArea } from './NotesArea';
 export { StickyNotesView } from './StickyNotesView';
 export { DocumentNotesView } from './DocumentNotesView';
 export { AiSuggestionsPanel } from './AiSuggestionsPanel';

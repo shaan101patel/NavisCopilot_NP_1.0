@@ -26,7 +26,13 @@ export const StickyNotesView: React.FC<StickyNotesViewProps> = ({
 }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {notes.map((note) => (
+      {notes.length === 0 ? (
+        <div className="col-span-full flex flex-col items-center justify-center h-32 text-center text-muted-foreground">
+          <div className="text-base font-medium mb-1">No Notes Yet</div>
+          <div className="text-sm">Click the + button above to add your first note</div>
+        </div>
+      ) : (
+        notes.map((note) => (
         <div 
           key={note.id}
           className={`relative p-3 rounded-lg shadow-md transition-all hover:shadow-lg ${
@@ -70,7 +76,8 @@ export const StickyNotesView: React.FC<StickyNotesViewProps> = ({
             </div>
           </div>
         </div>
-      ))}
+        ))
+      )}
     </div>
   );
 };

@@ -15,10 +15,15 @@ export const AiChat: React.FC<AiChatProps> = ({
   newMessage,
   aiResponseLevel,
   isAiTyping,
+  quickSuggestion,
+  isGeneratingSuggestion,
+  error,
   onNewMessageChange,
   onSendMessage,
   onKeyPress,
-  onAiResponseLevelChange
+  onAiResponseLevelChange,
+  onGenerateQuickSuggestion,
+  onClearError
 }) => {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [showAiLevelDropup, setShowAiLevelDropup] = React.useState(false);
@@ -45,6 +50,27 @@ export const AiChat: React.FC<AiChatProps> = ({
           Mode: <span className="capitalize font-medium text-primary">{aiResponseLevel}</span>
         </div>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="mb-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-destructive">{error}</span>
+            </div>
+            {onClearError && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClearError}
+                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+              >
+                ×
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto bg-muted/30 rounded-lg p-3 mb-3 min-h-0 scrollbar-thin">

@@ -41,9 +41,69 @@ export interface ChatMessage {
   timestamp: Date;
   aiResponseLevel?: AiResponseLevel;
   isTyping?: boolean;
+  suggestions?: string[];
+  confidence?: number;
 }
 
 export type AiResponseLevel = 'instant' | 'quick' | 'immediate';
+
+export interface AiChatMessage {
+  id: string;
+  callId: string;
+  content: string;
+  sender: 'agent' | 'ai';
+  aiResponseLevel?: AiResponseLevel;
+  timestamp: Date;
+  suggestions?: string[];
+  confidence?: number;
+}
+
+export interface AiSummary {
+  id: string;
+  callId: string;
+  summary: string;
+  keyPoints: string[];
+  actionItems: string[];
+  sentiment: 'positive' | 'neutral' | 'negative';
+  summaryType: 'brief' | 'detailed' | 'action_items';
+  generatedAt: Date;
+}
+
+export interface AiChatRequest {
+  callId: string;
+  message: string;
+  responseLevel: AiResponseLevel;
+  context?: {
+    transcript?: TranscriptEntry[];
+    notes?: StickyNote[];
+    customerInfo?: any;
+  };
+}
+
+export interface AiChatResponse {
+  success: boolean;
+  response: string;
+  suggestions?: string[];
+  confidence: number;
+  responseId: string;
+}
+
+export interface AiSummaryRequest {
+  callId: string;
+  transcript: TranscriptEntry[];
+  notes?: StickyNote[];
+  customerInfo?: any;
+  summaryType?: 'brief' | 'detailed' | 'action_items';
+}
+
+export interface AiSummaryResponse {
+  success: boolean;
+  summary: string;
+  keyPoints: string[];
+  actionItems: string[];
+  sentiment: 'positive' | 'neutral' | 'negative';
+  summaryId: string;
+}
 
 export interface Agent {
   id: string;
@@ -136,9 +196,11 @@ export interface AiChatProps {
   isAiTyping: boolean;
   quickSuggestion: string;
   isGeneratingSuggestion: boolean;
+  error?: string | null;
   onNewMessageChange: (message: string) => void;
   onSendMessage: () => void;
   onKeyPress: (e: React.KeyboardEvent) => void;
   onAiResponseLevelChange: (level: AiResponseLevel) => void;
   onGenerateQuickSuggestion: () => void;
+  onClearError?: () => void;
 }

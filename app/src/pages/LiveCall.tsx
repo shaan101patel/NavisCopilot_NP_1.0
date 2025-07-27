@@ -18,33 +18,29 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { GripHorizontal, Ticket, Plus } from "lucide-react";
+import { CallStateProvider } from '@/contexts/CallStateContext';
 
 // Import refactored components and hooks
-import {
-  CallTabs,
-  CallControls,
-  TranscriptArea,
-  NotesArea,
-  NotesHeader,
-  AiSuggestionsPanel,
-  AiChat,
-  useLiveCallState,
-  useCallControls,
-  useNotesState,
-  useAiChat,
-  useTranscript
-} from '@/components/livecall';
+import { CallTabs } from '@/components/livecall/CallTabs';
+import { CallControls } from '@/components/livecall/CallControls';
+import { TranscriptArea } from '@/components/livecall/TranscriptArea';
+import { NotesArea } from '@/components/livecall/NotesArea';
+import { AiSuggestionsPanel } from '@/components/livecall/AiSuggestionsPanel';
+import { AiChat } from '@/components/livecall/AiChat';
 
-// Import remaining modals and components that need to be extracted
-import { ConnectAudioModal, CreateTicketModal, TransferDropdown } from './modals';
+import { useLiveCallState } from '@/hooks/livecall/useLiveCallState';
+import { useCallControls } from '@/hooks/livecall/useCallControls';
+import { useNotesState } from '@/hooks/livecall/useNotesState';
+import { useAiChat } from '@/hooks/livecall/useAiChat';
+import { useTranscript } from '@/hooks/livecall/useTranscript';
 
-export default function LiveCall() {
+const LiveCallContent: React.FC = () => {
   // Custom hooks for state management
   const callState = useLiveCallState();
   const callControls = useCallControls(callState.activeCallSession?.callId);
-  const notesState = useNotesState();
-  const aiChatState = useAiChat();
-  const transcriptState = useTranscript();
+  const notesState = useNotesState(callState.activeCallSession?.callId);
+  const aiChatState = useAiChat(callState.activeCallSession?.callId);
+  const transcriptState = useTranscript(callState.activeCallSession?.callId);
 
   // Local component state
   const [callDuration, setCallDuration] = useState('03:24');
@@ -104,30 +100,6 @@ export default function LiveCall() {
     setShowCreateTicketModal(true);
   }, []);
 
-  // Handle modal close
-  const handleCloseConnectAudioModal = useCallback(() => {
-    setShowConnectAudioModal(false);
-  }, []);
-
-  const handleCloseCreateTicketModal = useCallback(() => {
-    setShowCreateTicketModal(false);
-  }, []);
-
-  // Show error messages if any
-  useEffect(() => {
-    if (callState.error) {
-      console.error('Call state error:', callState.error);
-      // You could show a toast notification here
-    }
-  }, [callState.error]);
-
-  useEffect(() => {
-    if (callControls.error) {
-      console.error('Call controls error:', callControls.error);
-      // You could show a toast notification here
-    }
-  }, [callControls.error]);
-
   return (
     <div className="h-[calc(100vh-200px)]">
       {/* Chrome-style Call Tabs */}
@@ -161,7 +133,7 @@ export default function LiveCall() {
         <div className="flex items-center gap-3">
           {/* Context-Aware Call Controls */}
           <CallControls
-            hasActiveCall={callState.hasActiveCall}
+            hasActiveCall={!!callState.activeCallSession}
             showCallControlsMenu={callControls.showCallControlsMenu}
             onToggleCallControls={handleConnectAudioOrControls}
             onHold={callControls.handleHold}
@@ -189,15 +161,6 @@ export default function LiveCall() {
           <p className="text-red-700 text-sm">
             {callState.error || callControls.error}
           </p>
-          <div className="mt-2 flex gap-2">
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={callState.error ? () => {} : callControls.clearError}
-            >
-              Dismiss
-            </Button>
-          </div>
         </div>
       )}
 
@@ -246,16 +209,6 @@ export default function LiveCall() {
               className="flex flex-col overflow-hidden"
               style={{ height: `${100 - transcriptHeight}%` }}
             >
-              <NotesHeader
-                notesViewMode={notesState.notesViewMode}
-                onNotesViewModeChange={notesState.setNotesViewMode}
-                onAddNote={notesState.addNote}
-                onCopyAllNotes={notesState.copyAllStickyNotes}
-                onCopyAllDocument={notesState.copyAllDocumentNotes}
-                onGenerateAiNote={notesState.generateAiNote}
-                copiedAllNotes={notesState.copiedAllNotes}
-                copiedAllDocument={notesState.copiedAllDocument}
-              />
               <NotesArea
                 notes={notesState.notes}
                 documentNotes={notesState.documentNotes}
@@ -264,11 +217,11 @@ export default function LiveCall() {
                 onAddNote={notesState.addNote}
                 onUpdateNote={notesState.updateNote}
                 onDeleteNote={notesState.deleteNote}
-                onDocumentNotesChange={notesState.setDocumentNotes}
+                onDocumentNotesChange={notesState.updateDocumentNotes}
                 onCopyNote={notesState.copyStickyNoteToClipboard}
                 onCopyAllNotes={notesState.copyAllStickyNotes}
-                onCopyAllDocument={notesState.copyAllDocumentNotes}
-                onGenerateAiNote={notesState.generateAiNote}
+                onCopyAllDocument={notesState.copyDocumentNotesToClipboard}
+                onGenerateAiNote={() => {}} // Placeholder function
                 copiedNoteIds={notesState.copiedNoteIds}
                 copiedAllNotes={notesState.copiedAllNotes}
                 copiedAllDocument={notesState.copiedAllDocument}
@@ -296,42 +249,26 @@ export default function LiveCall() {
             isAiTyping={aiChatState.isAiTyping}
             quickSuggestion={aiChatState.quickSuggestion}
             isGeneratingSuggestion={aiChatState.isGeneratingSuggestion}
+            error={aiChatState.error}
             onNewMessageChange={aiChatState.setNewMessage}
             onSendMessage={aiChatState.sendChatMessage}
             onKeyPress={aiChatState.handleKeyPress}
             onAiResponseLevelChange={aiChatState.setAiResponseLevel}
             onGenerateQuickSuggestion={aiChatState.generateQuickSuggestion}
+            onClearError={aiChatState.clearError}
           />
         </Card>
       </div>
       )}
-
-      {/* Modals */}
-      
-      {/* Transfer Dropdown - Standalone Modal */}
-      <TransferDropdown
-        show={callControls.showTransferDropdown}
-        selectedAgent={callControls.selectedAgent}
-        agentSearchQuery={callControls.agentSearchQuery}
-        filteredAgents={callControls.filteredAgents}
-        onSelectAgent={callControls.handleAgentSelect}
-        onSearchQueryChange={callControls.handleAgentSearch}
-        onConfirmTransfer={callControls.handleConfirmTransfer}
-        onCancelTransfer={callControls.handleCancelTransfer}
-      />
-
-      {/* Connect Audio Modal */}
-      <ConnectAudioModal
-        show={showConnectAudioModal}
-        onClose={handleCloseConnectAudioModal}
-      />
-
-      {/* Create Ticket Modal */}
-      <CreateTicketModal
-        show={showCreateTicketModal}
-        onClose={handleCloseCreateTicketModal}
-        callSession={callState.activeCallSession}
-      />
     </div>
+  );
+};
+
+// Main export with CallStateProvider wrapper
+export default function LiveCall() {
+  return (
+    <CallStateProvider>
+      <LiveCallContent />
+    </CallStateProvider>
   );
 }

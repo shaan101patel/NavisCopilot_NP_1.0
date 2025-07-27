@@ -1,58 +1,101 @@
 /**
  * useNotesState Hook
  * 
- * Custom hook for managing notes state and clipboard operations.
- * Handles both sticky notes and document-style note management.
+ * Custom hook for managing call-specific notes state and clipboard operations.
+ * Handles both sticky notes and document-style note management with proper
+ * call isolation.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { StickyNote, NotesViewMode } from '@/types/livecall';
+import { useCallStateContext } from '@/contexts/CallStateContext';
 
-// Start with empty notes - no mock data
-export const useNotesState = () => {
-  const [notes, setNotes] = useState<StickyNote[]>([]);
-  const [documentNotes, setDocumentNotes] = useState('');
+export const useNotesState = (callId?: string) => {
+  // Local UI state (not call-specific)
   const [notesViewMode, setNotesViewMode] = useState<NotesViewMode>('sticky');
-  
-  // Copy functionality state
   const [copiedNoteIds, setCopiedNoteIds] = useState<Set<string>>(new Set());
   const [copiedAllNotes, setCopiedAllNotes] = useState(false);
   const [copiedAllDocument, setCopiedAllDocument] = useState(false);
 
-  // IMPLEMENT LATER: Connect to backend for note operations
-  const addNote = useCallback(() => {
-    // IMPLEMENT LATER: Create new note in backend and update local state
-    const newNote: StickyNote = {
-      id: `note-${Date.now()}`,
-      content: "New note...",
-      createdAt: new Date(),
-      color: "yellow"
-    };
-    setNotes(prev => [...prev, newNote]);
-  }, []);
+  // Call state context
+  const callStateContext = useCallStateContext();
+  
+  // Ensure call state exists when callId changes
+  useEffect(() => {
+    if (callId) {
+      callStateContext.ensureCallState(callId);
+    }
+  }, [callId, callStateContext]);
+  
+  // Get call-specific state if callId is provided
+  const callState = callId ? callStateContext.getCallState(callId) : null;
+  
+  // Fall back to empty state if no callId provided
+  const notes = callState?.notes || [];
+  const documentNotes = callState?.documentNotes || '';
+  const notesError = callState?.notesError || null;
+  const notesLoading = callState?.notesLoading || false;
 
-  const updateNote = useCallback((id: string, content: string) => {
-    // IMPLEMENT LATER: Update note in backend
-    setNotes(prev => prev.map(note => 
-      note.id === id ? { ...note, content, updatedAt: new Date() } : note
-    ));
-  }, []);
+  // Notes operations (call-specific)
+  const addNote = useCallback(async () => {
+    if (!callId) {
+      console.warn('Cannot add note: no callId provided');
+      return;
+    }
+    
+    try {
+      await callStateContext.addCallNote(callId, "New note...", "yellow");
+    } catch (error) {
+      console.error('Failed to add note:', error);
+    }
+  }, [callId, callStateContext]);
 
-  const deleteNote = useCallback((id: string) => {
-    // IMPLEMENT LATER: Delete note from backend
-    setNotes(prev => prev.filter(note => note.id !== id));
-  }, []);
+  const updateNote = useCallback(async (id: string, content: string) => {
+    if (!callId) {
+      console.warn('Cannot update note: no callId provided');
+      return;
+    }
+    
+    try {
+      await callStateContext.updateCallNote(callId, id, content);
+    } catch (error) {
+      console.error('Failed to update note:', error);
+    }
+  }, [callId, callStateContext]);
 
-  // Copy button: Copies the content of this sticky note to clipboard.
+  const deleteNote = useCallback(async (id: string) => {
+    if (!callId) {
+      console.warn('Cannot delete note: no callId provided');
+      return;
+    }
+    
+    try {
+      await callStateContext.deleteCallNote(callId, id);
+    } catch (error) {
+      console.error('Failed to delete note:', error);
+    }
+  }, [callId, callStateContext]);
+
+  const updateDocumentNotes = useCallback(async (content: string) => {
+    if (!callId) {
+      console.warn('Cannot update document notes: no callId provided');
+      return;
+    }
+    
+    try {
+      await callStateContext.updateDocumentNotes(callId, content);
+    } catch (error) {
+      console.error('Failed to update document notes:', error);
+    }
+  }, [callId, callStateContext]);
+
+  // Copy functionality (UI-specific, not call-dependent)
   const copyStickyNoteToClipboard = useCallback(async (noteId: string, content: string) => {
     try {
-      // Use modern Clipboard API for reliable copying across browsers
       await navigator.clipboard.writeText(content);
       
-      // Provide visual feedback that copy was successful
       setCopiedNoteIds(prev => new Set(prev).add(noteId));
       
-      // Clear the feedback after 2 seconds
       setTimeout(() => {
         setCopiedNoteIds(prev => {
           const newSet = new Set(prev);
@@ -62,7 +105,6 @@ export const useNotesState = () => {
       }, 2000);
       
     } catch (err) {
-      // Fallback for browsers that don't support Clipboard API
       console.warn('Clipboard API not available, falling back to execCommand');
       try {
         const textArea = document.createElement('textarea');
@@ -72,7 +114,6 @@ export const useNotesState = () => {
         document.execCommand('copy');
         document.body.removeChild(textArea);
         
-        // Still provide visual feedback
         setCopiedNoteIds(prev => new Set(prev).add(noteId));
         setTimeout(() => {
           setCopiedNoteIds(prev => {
@@ -87,10 +128,8 @@ export const useNotesState = () => {
     }
   }, []);
 
-  // Copy all sticky notes to clipboard
   const copyAllStickyNotes = useCallback(async () => {
     try {
-      // Format all notes with timestamps and separators
       const allNotesText = notes.map((note, index) => {
         const timestamp = note.createdAt.toLocaleString();
         return `Note ${index + 1} (${timestamp}):\n${note.content}`;
@@ -98,97 +137,88 @@ export const useNotesState = () => {
       
       const formattedText = `Call Notes Summary - ${new Date().toLocaleString()}\n\n${allNotesText}`;
       
-      // Use modern Clipboard API
       await navigator.clipboard.writeText(formattedText);
       
-      // Provide visual feedback
       setCopiedAllNotes(true);
-      
-      // Clear feedback after 2 seconds
-      setTimeout(() => {
-        setCopiedAllNotes(false);
-      }, 2000);
+      setTimeout(() => setCopiedAllNotes(false), 2000);
       
     } catch (err) {
-      console.error('Failed to copy all sticky notes to clipboard:', err);
+      console.warn('Clipboard API not available, falling back to execCommand');
+      try {
+        const allNotesText = notes.map((note, index) => {
+          const timestamp = note.createdAt.toLocaleString();
+          return `Note ${index + 1} (${timestamp}):\n${note.content}`;
+        }).join('\n\n---\n\n');
+        
+        const formattedText = `Call Notes Summary - ${new Date().toLocaleString()}\n\n${allNotesText}`;
+        
+        const textArea = document.createElement('textarea');
+        textArea.value = formattedText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        setCopiedAllNotes(true);
+        setTimeout(() => setCopiedAllNotes(false), 2000);
+      } catch (fallbackErr) {
+        console.error('Failed to copy all notes to clipboard:', fallbackErr);
+      }
     }
   }, [notes]);
 
-  // Copy all document content to clipboard
-  const copyAllDocumentNotes = useCallback(async () => {
+  const copyDocumentNotesToClipboard = useCallback(async () => {
     try {
-      // Add header and timestamp to document content
-      const timestamp = new Date().toLocaleString();
-      const formattedContent = `Call Summary & Notes - ${timestamp}\n\n${documentNotes || 'No notes written yet.'}`;
+      const formattedText = `Call Document Notes - ${new Date().toLocaleString()}\n\n${documentNotes}`;
       
-      // Use modern Clipboard API
-      await navigator.clipboard.writeText(formattedContent);
+      await navigator.clipboard.writeText(formattedText);
       
-      // Provide visual feedback
       setCopiedAllDocument(true);
-      
-      // Clear feedback after 2 seconds
-      setTimeout(() => {
-        setCopiedAllDocument(false);
-      }, 2000);
+      setTimeout(() => setCopiedAllDocument(false), 2000);
       
     } catch (err) {
-      console.error('Failed to copy document notes to clipboard:', err);
+      console.warn('Clipboard API not available, falling back to execCommand');
+      try {
+        const formattedText = `Call Document Notes - ${new Date().toLocaleString()}\n\n${documentNotes}`;
+        
+        const textArea = document.createElement('textarea');
+        textArea.value = formattedText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        setCopiedAllDocument(true);
+        setTimeout(() => setCopiedAllDocument(false), 2000);
+      } catch (fallbackErr) {
+        console.error('Failed to copy document notes to clipboard:', fallbackErr);
+      }
     }
   }, [documentNotes]);
 
-  // IMPLEMENT LATER: Generate AI-powered call summary and insert into the document editor.
-  const generateAiNote = useCallback(async () => {
-    // Mock AI generation for now
-    const mockAiSummary = `
-Call Summary - ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
-
-Customer: Customer from current call
-Issue: Order inquiry and shipping concerns
-
-Key Points:
-• Customer inquired about order ORD-12345
-• Mentioned previous shipping issues
-• Prefers email communication over phone calls
-• Requires follow-up within 24 hours
-
-Action Items:
-• Check order status in system
-• Update customer preferences for email notifications
-• Schedule follow-up contact within 24 hours
-• Review shipping history for improvement opportunities
-
-Resolution: [To be completed]
-
-Agent Notes: Customer was patient and understanding. Issue appears to be related to shipping delays.
-`;
-
-    // Insert the generated content into the document editor
-    const currentContent = documentNotes;
-    const newContent = currentContent 
-      ? `${currentContent}\n\n---\n\n${mockAiSummary.trim()}`
-      : mockAiSummary.trim();
-    
-    setDocumentNotes(newContent);
-    
-    console.log('AI note generated and inserted into document');
-  }, [documentNotes]);
-
   return {
+    // Call-specific state
     notes,
     documentNotes,
+    notesError,
+    notesLoading,
+    
+    // UI state
     notesViewMode,
+    setNotesViewMode,
     copiedNoteIds,
     copiedAllNotes,
     copiedAllDocument,
-    setNotesViewMode,
-    setDocumentNotes,
+    
+    // Call-specific operations
     addNote,
     updateNote,
     deleteNote,
+    updateDocumentNotes,
+    
+    // Copy operations
     copyStickyNoteToClipboard,
     copyAllStickyNotes,
-    copyAllDocumentNotes,
-    generateAiNote
+    copyDocumentNotesToClipboard,
   };
 };

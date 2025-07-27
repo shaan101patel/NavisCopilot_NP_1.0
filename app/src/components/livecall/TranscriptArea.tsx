@@ -18,8 +18,15 @@ export const TranscriptArea: React.FC<TranscriptAreaProps> = ({
     <div className="flex-1 overflow-y-auto p-4 bg-muted/30">
       {/* IMPLEMENT LATER: Stream real-time transcript data here with WebSocket connection */}
       {/* Expected WebSocket events: 'transcript-update', 'speaker-change', 'call-status-change' */}
-      <div className="space-y-3">
-        {transcript.map((entry) => (
+      
+      {transcript.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+          <div className="text-lg font-medium mb-2">Live Transcript</div>
+          <div className="text-sm">Conversation transcript will appear here once the call begins</div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {transcript.map((entry) => (
           <div key={entry.id} className="group relative">
             <div className="flex items-center gap-2 mb-1">
               <span className={`font-bold text-sm ${
@@ -52,7 +59,8 @@ export const TranscriptArea: React.FC<TranscriptAreaProps> = ({
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
