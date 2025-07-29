@@ -27,6 +27,7 @@ import { TranscriptArea } from '@/components/livecall/TranscriptArea';
 import { NotesArea } from '@/components/livecall/NotesArea';
 import { AiSuggestionsPanel } from '@/components/livecall/AiSuggestionsPanel';
 import { AiChat } from '@/components/livecall/AiChat';
+import { CreateTicketModal } from '@/pages/modals/CreateTicketModal';
 
 import { useLiveCallState } from '@/hooks/livecall/useLiveCallState';
 import { useCallControls } from '@/hooks/livecall/useCallControls';
@@ -254,12 +255,29 @@ const LiveCallContent: React.FC = () => {
             onSendMessage={aiChatState.sendChatMessage}
             onKeyPress={aiChatState.handleKeyPress}
             onAiResponseLevelChange={aiChatState.setAiResponseLevel}
-            onGenerateQuickSuggestion={aiChatState.generateQuickSuggestion}
-            onClearError={aiChatState.clearError}
-          />
-        </Card>
-      </div>
-      )}
+            onGenerateQuickSuggestion={aiChatState.generateQuickSuggestion}          onClearError={aiChatState.clearError}
+        />
+      </Card>
+    </div>
+    )}
+
+      {/* Create Ticket Modal */}
+      <CreateTicketModal
+        show={showCreateTicketModal}
+        onClose={() => setShowCreateTicketModal(false)}
+        callSession={callState.activeCallSession}
+        transcript={transcriptState.transcript}
+        stickyNotes={notesState.notes}
+        documentNotes={notesState.documentNotes}
+        aiChatMessages={aiChatState.chatMessages}
+        callAnalytics={{
+          callDuration: Date.now() - (callState.activeCallSession?.callStartTime.getTime() || 0),
+          sentimentScore: 0.7, // Mock data - replace with actual analytics
+          keywordsMentioned: ['billing', 'refund', 'technical'], // Mock data
+          escalationFlags: [], // Mock data
+          resolutionStatus: 'pending'
+        }}
+      />
     </div>
   );
 };

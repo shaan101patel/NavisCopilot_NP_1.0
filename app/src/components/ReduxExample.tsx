@@ -30,17 +30,12 @@ const ReduxExample: React.FC = () => {
     }));
   };
 
-  // Example: Add a new ticket
+  // Example: Add a new ticket using the new async API
   const handleCreateTicket = () => {
-    dispatch(ticketsActions.addTicket({
-      id: Date.now().toString(),
+    dispatch(ticketsActions.createTicket({
       title: 'Sample Ticket',
       description: 'This is a sample ticket created from Redux example',
-      status: 'open',
       priority: 'medium',
-      createdBy: user?.id || 'unknown',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
       tags: ['sample', 'demo'],
     }));
   };

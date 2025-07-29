@@ -1,524 +1,526 @@
 /**
  * TicketDetailsView Component
  * 
- * Comprehensive ticket details view showing all ticket information,
- * associated call data, transcript, notes, and AI chat history.
- * Designed for clarity, accessibility, and future backend integration.
+ * A comprehensive modal view for displaying detailed ticket information including:
+ * - Ticket metadata and status
+ * - Customer information
+ * - Associated call details and transcript
+ * - Agent notes and AI insights
+ * - Action history and resolution details
+ * 
+ * Designed for clarity, accessibility, and real backend integration.
  */
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { 
-  X, 
-  Copy, 
-  Check, 
-  Phone, 
-  User, 
-  Mail, 
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Ticket } from '@/services/tickets';
+import { callAPI } from '@/services/supabase';
+import {
+  X,
+  User,
   Calendar,
-  MessageSquare,
-  FileText,
-  Zap,
-  Clock,
+  Phone,
+  Mail,
   AlertCircle,
   CheckCircle,
-  Pause
-} from "lucide-react";
-import clsx from "clsx";
+  Clock,
+  Edit3,
+  MessageSquare,
+  FileText,
+  Tag,
+  ArrowRight
+} from 'lucide-react';
 
-// IMPLEMENT LATER: Replace with real ticket data types from backend
-interface TicketDetails {
-  id: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
-  callId?: string;
-  title: string;
-  description: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  category: string;
-  status: 'open' | 'pending' | 'resolved' | 'closed';
-  agentNotes: string;
-  createdAt: Date;
-  updatedAt: Date;
-  assignedAgent?: string;
-}
-
-interface TranscriptLine {
-  id: string;
-  speaker: 'Agent' | 'Customer';
-  text: string;
-  timestamp: Date;
-}
-
-interface StickyNote {
-  id: string;
-  content: string;
-  color: string;
-  createdAt: Date;
-}
-
-interface ChatMessage {
-  id: string;
-  sender: 'agent' | 'ai';
-  content: string;
-  timestamp: Date;
-  aiResponseLevel?: 'instant' | 'quick' | 'immediate';
-}
+/**
+ * TicketDetailsView Component
+ * 
+ * A comprehensive modal view for displaying detailed ticket information including:
+ * - Ticket metadata and status
+ * - Customer information
+ * - Associated call details and transcript
+ * - Agent notes and AI insights
+ * - Action history and resolution details
+ * 
+ * Designed for clarity, accessibility, and real backend integration.
+ */
 
 interface TicketDetailsViewProps {
-  ticket: TicketDetails;
+  ticket: Ticket;
   isOpen: boolean;
   onClose: () => void;
 }
+
+const statusColors = {
+  "open": "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400",
+  "in-progress": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400",
+  "resolved": "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400",
+  "closed": "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400",
+  "escalated": "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+};
+
+const priorityColors = {
+  "low": "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400",
+  "medium": "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400",
+  "high": "bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400",
+  "urgent": "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+};
+
+const statusIcons = {
+  "open": AlertCircle,
+  "in-progress": Clock,
+  "resolved": CheckCircle,
+  "closed": CheckCircle,
+  "escalated": AlertCircle
+};
 
 export const TicketDetailsView: React.FC<TicketDetailsViewProps> = ({
   ticket,
   isOpen,
   onClose
 }) => {
-  const [copiedItems, setCopiedItems] = useState<Set<string>>(new Set());
-  const [isEditingCallSummary, setIsEditingCallSummary] = useState(false);
-  const [callSummary, setCallSummary] = useState('');
+  // State for related data
+  const [callTranscript, setCallTranscript] = useState<any[]>([]);
+  const [callDetails, setCallDetails] = useState<any>(null);
+  const [aiChatMessages, setAiChatMessages] = useState<any[]>([]);
+  const [callNotes, setCallNotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // IMPLEMENT LATER: Fetch call transcript from backend
-  // Expected API: GET /api/calls/{callId}/transcript
-  // Data structure: { transcript: TranscriptLine[], callDuration: number, callStartTime: Date }
-  const mockTranscript: TranscriptLine[] = [
-    { id: 't1', speaker: 'Agent', text: 'Hello, thank you for calling Navis support. How can I help you today?', timestamp: new Date() },
-    { id: 't2', speaker: 'Customer', text: 'Hi, I\'m having trouble with my recent order. It hasn\'t arrived yet.', timestamp: new Date() },
-    { id: 't3', speaker: 'Agent', text: 'I\'d be happy to help you track your order. Can you provide me with your order number?', timestamp: new Date() },
-    { id: 't4', speaker: 'Customer', text: 'Yes, it\'s ORD-12345.', timestamp: new Date() },
-  ];
+  // Load related data when ticket changes
+  useEffect(() => {
+    if (ticket.call_id) {
+      loadCallData();
+    }
+  }, [ticket.call_id]);
 
-  // IMPLEMENT LATER: Fetch sticky notes from backend
-  // Expected API: GET /api/calls/{callId}/notes
-  // Data structure: { notes: StickyNote[] }
-  const mockStickyNotes: StickyNote[] = [
-    { id: 'n1', content: 'Customer mentioned previous shipping issues', color: 'yellow', createdAt: new Date() },
-    { id: 'n2', content: 'Check order status in fulfillment system', color: 'blue', createdAt: new Date() },
-    { id: 'n3', content: 'Follow up needed within 24 hours', color: 'pink', createdAt: new Date() },
-  ];
+  const loadCallData = async () => {
+    if (!ticket.call_id) return;
 
-  // IMPLEMENT LATER: Fetch AI chat history from backend
-  // Expected API: GET /api/calls/{callId}/chat-history
-  // Data structure: { chatHistory: ChatMessage[] }
-  const mockChatHistory: ChatMessage[] = [
-    { id: 'c1', sender: 'agent', content: 'How should I handle a delayed order complaint?', timestamp: new Date() },
-    { id: 'c2', sender: 'ai', content: 'Start by apologizing for the inconvenience, then check the order status in your system. Offer tracking information and provide an estimated delivery date.', timestamp: new Date(), aiResponseLevel: 'quick' },
-    { id: 'c3', sender: 'agent', content: 'What if the order is lost?', timestamp: new Date() },
-    { id: 'c4', sender: 'ai', content: 'If the order appears lost, offer a full refund or replacement shipment. Document the incident and escalate to fulfillment team for investigation.', timestamp: new Date(), aiResponseLevel: 'immediate' },
-  ];
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Load call details, transcript, AI chat, and notes in parallel
+      const [callDetailsRes, transcriptRes, aiChatRes, notesRes] = await Promise.allSettled([
+        callAPI.getCallSession(ticket.call_id),
+        callAPI.getCallTranscript(ticket.call_id),
+        callAPI.getCallAiChatMessages(ticket.call_id),
+        callAPI.getCallNotes(ticket.call_id)
+      ]);
+
+      if (callDetailsRes.status === 'fulfilled') {
+        setCallDetails(callDetailsRes.value);
+      } else {
+        console.warn('Failed to load call details:', callDetailsRes.reason);
+      }
+
+      if (transcriptRes.status === 'fulfilled') {
+        setCallTranscript(transcriptRes.value.transcript || []);
+      } else {
+        console.warn('Failed to load call transcript:', transcriptRes.reason);
+      }
+
+      if (aiChatRes.status === 'fulfilled') {
+        setAiChatMessages(aiChatRes.value.messages || []);
+      } else {
+        console.warn('Failed to load AI chat messages:', aiChatRes.reason);
+      }
+
+      if (notesRes.status === 'fulfilled') {
+        setCallNotes(notesRes.value.notes || []);
+      } else {
+        console.warn('Failed to load call notes:', notesRes.reason);
+      }
+    } catch (err: any) {
+      console.error('Error loading call data:', err);
+      setError('Failed to load call data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!isOpen) return null;
 
-  const handleCopyText = async (text: string, itemId: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedItems(prev => new Set(prev).add(itemId));
-      setTimeout(() => {
-        setCopiedItems(prev => {
-          const updated = new Set(prev);
-          updated.delete(itemId);
-          return updated;
-        });
-      }, 2000);
-    } catch (error) {
-      console.error('Failed to copy text:', error);
-    }
-  };
-
-  const handleCopyAllTranscript = async () => {
-    const fullTranscript = mockTranscript
-      .map(line => `${line.speaker}: ${line.text}`)
-      .join('\n');
-    await handleCopyText(fullTranscript, 'full-transcript');
-  };
-
-  const handleGenerateAiSummary = async () => {
-    if (!ticket.callId) {
-      setCallSummary('No call data available for this ticket.');
-      return;
-    }
-
-    try {
-      // Get transcript data (you may need to modify this based on available data)
-      const transcriptData = mockTranscript.map(line => ({
-        id: line.id,
-        speaker: line.speaker,
-        text: line.text,
-        timestamp: new Date(line.timestamp)
-      }));
-
-      // Call AI service to generate call summary
-      const { callAPI } = await import('@/services/supabase');
-      const response = await callAPI.generateAiSummary({
-        callId: ticket.callId,
-        transcript: transcriptData,
-        summaryType: 'detailed'
-      });
-
-      if (response.success) {
-        setCallSummary(response.summary);
-      } else {
-        setCallSummary('Failed to generate AI summary. Please try again.');
-      }
-    } catch (error) {
-      console.error('Failed to generate AI summary:', error);
-      setCallSummary('Error generating AI summary. Please try again later.');
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return 'bg-red-500';
-      case 'high': return 'bg-orange-500';
-      case 'medium': return 'bg-yellow-500';
-      case 'low': return 'bg-green-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'open': return <AlertCircle size={16} className="text-red-500" />;
-      case 'pending': return <Pause size={16} className="text-yellow-500" />;
-      case 'resolved': return <CheckCircle size={16} className="text-green-500" />;
-      case 'closed': return <CheckCircle size={16} className="text-gray-500" />;
-      default: return <AlertCircle size={16} />;
-    }
-  };
-
-  const getStickyNoteColor = (color: string) => {
-    switch (color) {
-      case 'yellow': return 'bg-yellow-100 border-yellow-300 text-yellow-800';
-      case 'blue': return 'bg-blue-100 border-blue-300 text-blue-800';
-      case 'pink': return 'bg-pink-100 border-pink-300 text-pink-800';
-      case 'green': return 'bg-green-100 border-green-300 text-green-800';
-      default: return 'bg-gray-100 border-gray-300 text-gray-800';
-    }
-  };
+  const StatusIcon = statusIcons[ticket.status];
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-background border border-border rounded-lg w-full max-w-6xl max-h-[90vh] overflow-hidden shadow-xl">
+      <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border bg-muted/30">
-          <div className="flex items-center gap-4">
+        <CardHeader className="border-b border-border">
+          <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-2xl font-semibold text-foreground">Ticket Details</h2>
-              <p className="text-sm text-muted-foreground">#{ticket.id}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge className={clsx("text-white", getPriorityColor(ticket.priority))}>
-                {ticket.priority.toUpperCase()}
-              </Badge>
-              <div className="flex items-center gap-1">
-                {getStatusIcon(ticket.status)}
-                <span className="text-sm font-medium capitalize">{ticket.status}</span>
+              <div className="flex items-center gap-3 mb-2">
+                <h2 className="text-xl font-semibold">{ticket.title}</h2>
+                <Badge className={`${statusColors[ticket.status]} flex items-center gap-1`}>
+                  <StatusIcon className="w-3 h-3" />
+                  {ticket.status}
+                </Badge>
+                <Badge className={priorityColors[ticket.priority]}>
+                  {ticket.priority}
+                </Badge>
               </div>
+              <p className="text-sm text-muted-foreground">
+                Ticket #{ticket.ticket_number} • Created {new Date(ticket.created_at).toLocaleDateString()}
+              </p>
             </div>
+            <Button variant="outline" size="sm" onClick={onClose}>
+              <X className="w-4 h-4" />
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="h-8 w-8 p-0"
-            aria-label="Close ticket details"
-          >
-            <X size={16} />
-          </Button>
-        </div>
+        </CardHeader>
 
         {/* Content */}
-        <div className="flex h-[calc(90vh-120px)] overflow-hidden">
-          {/* Left Panel - Ticket Info & Call Data */}
-          <div className="w-1/2 p-6 overflow-y-auto border-r border-border">
-            
-            {/* 1. Ticket Information Panel */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText size={18} />
-                  Ticket Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Customer Name</label>
-                    <p className="text-sm font-medium">{ticket.customerName}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Email</label>
-                    <p className="text-sm">{ticket.customerEmail}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Phone</label>
-                    <p className="text-sm">{ticket.customerPhone}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Call ID</label>
-                    <p className="text-sm font-mono">{ticket.callId || 'N/A'}</p>
-                  </div>
+        <div className="flex-1 overflow-y-auto max-h-[calc(90vh-120px)]">
+          <div className="p-6 space-y-6">
+            {/* Error Display */}
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                  <span className="text-red-800">{error}</span>
                 </div>
-                
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Issue Title</label>
-                  <p className="text-sm font-medium">{ticket.title}</p>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Description</label>
-                  <p className="text-sm leading-relaxed">{ticket.description}</p>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Category</label>
-                    <p className="text-sm">{ticket.category}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Assigned Agent</label>
-                    <p className="text-sm">{ticket.assignedAgent || 'Unassigned'}</p>
-                  </div>
-                </div>
-                
-                {ticket.agentNotes && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Agent Notes</label>
-                    <p className="text-sm leading-relaxed bg-muted/50 p-3 rounded-md">{ticket.agentNotes}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              </div>
+            )}
 
-            {/* 2. Call Transcript Section */}
-            <Card className="mb-6">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquare size={18} />
-                    Call Transcript
-                  </CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCopyAllTranscript}
-                    className="flex items-center gap-2"
-                  >
-                    {copiedItems.has('full-transcript') ? (
-                      <Check size={14} className="text-green-500" />
-                    ) : (
-                      <Copy size={14} />
-                    )}
-                    Copy All
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {mockTranscript.map((line) => (
-                    <div key={line.id} className="flex items-start gap-3 p-3 rounded-md bg-muted/30">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={clsx(
-                            "text-xs font-medium px-2 py-1 rounded",
-                            line.speaker === 'Agent' 
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                              : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                          )}>
-                            {line.speaker}
+            {/* Basic Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Ticket Details */}
+              <Card>
+                <CardHeader>
+                  <h3 className="text-lg font-medium flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    Ticket Details
+                  </h3>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Description</label>
+                    <p className="mt-1 text-sm">{ticket.description}</p>
+                  </div>
+                  
+                  {ticket.issue_category && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Category</label>
+                      <p className="mt-1 text-sm">{ticket.issue_category}</p>
+                    </div>
+                  )}
+
+                  {ticket.tags && ticket.tags.length > 0 && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Tags</label>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {ticket.tags.map((tag, index) => (
+                          <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">
+                            <Tag className="w-3 h-3 mr-1" />
+                            {tag}
                           </span>
-                          <span className="text-xs text-muted-foreground">
-                            {line.timestamp.toLocaleTimeString()}
-                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Created</label>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">{new Date(ticket.created_at).toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Last Updated</label>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">{new Date(ticket.updated_at).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {ticket.resolved_at && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Resolved</label>
+                      <div className="flex items-center gap-1 mt-1">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <span className="text-sm">{new Date(ticket.resolved_at).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Customer Information */}
+              <Card>
+                <CardHeader>
+                  <h3 className="text-lg font-medium flex items-center gap-2">
+                    <User className="w-5 h-5" />
+                    Customer Information
+                  </h3>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {ticket.customer_name && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Name</label>
+                      <p className="mt-1 text-sm font-medium">{ticket.customer_name}</p>
+                    </div>
+                  )}
+
+                  {ticket.customer_email && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Email</label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Mail className="w-4 h-4 text-muted-foreground" />
+                        <a href={`mailto:${ticket.customer_email}`} className="text-sm text-blue-600 hover:underline">
+                          {ticket.customer_email}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
+                  {ticket.customer_phone && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Phone</label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Phone className="w-4 h-4 text-muted-foreground" />
+                        <a href={`tel:${ticket.customer_phone}`} className="text-sm text-blue-600 hover:underline">
+                          {ticket.customer_phone}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
+                  {ticket.call_id && (
+                    <div className="pt-2 border-t">
+                      <label className="text-sm font-medium text-muted-foreground">Associated Call</label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Phone className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm text-blue-600">Call ID: {ticket.call_id}</span>
+                        {ticket.created_from_call && (
+                          <Badge variant="secondary" className="text-xs">Created from call</Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Agent Notes and Resolution */}
+            {(ticket.agent_notes || ticket.resolution_summary) && (
+              <Card>
+                <CardHeader>
+                  <h3 className="text-lg font-medium flex items-center gap-2">
+                    <Edit3 className="w-5 h-5" />
+                    Agent Notes & Resolution
+                  </h3>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {ticket.agent_notes && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Agent Notes</label>
+                      <p className="mt-1 text-sm whitespace-pre-wrap">{ticket.agent_notes}</p>
+                    </div>
+                  )}
+
+                  {ticket.resolution_summary && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Resolution Summary</label>
+                      <p className="mt-1 text-sm whitespace-pre-wrap">{ticket.resolution_summary}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* AI Insights */}
+            {ticket.ai_insights && ticket.ai_insights.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <h3 className="text-lg font-medium flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5" />
+                    AI Insights
+                  </h3>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {ticket.ai_insights.map((insight, index) => (
+                      <div key={index} className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <p className="text-sm">{insight}</p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Call-Related Data */}
+            {ticket.call_id && (
+              <div className="space-y-6">
+                {/* Call Details */}
+                {callDetails && (
+                  <Card>
+                    <CardHeader>
+                      <h3 className="text-lg font-medium flex items-center gap-2">
+                        <Phone className="w-5 h-5" />
+                        Call Details
+                      </h3>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Status</label>
+                          <p className="mt-1 text-sm font-medium capitalize">{callDetails.status}</p>
                         </div>
-                        <p className="text-sm leading-relaxed">{line.text}</p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleCopyText(line.text, line.id)}
-                        className="h-8 w-8 p-0 opacity-70 hover:opacity-100"
-                        title="Copy this line"
-                      >
-                        {copiedItems.has(line.id) ? (
-                          <Check size={14} className="text-green-500" />
-                        ) : (
-                          <Copy size={14} />
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Started</label>
+                          <p className="mt-1 text-sm">{new Date(callDetails.startTime).toLocaleString()}</p>
+                        </div>
+                        {callDetails.endTime && (
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Ended</label>
+                            <p className="mt-1 text-sm">{new Date(callDetails.endTime).toLocaleString()}</p>
+                          </div>
                         )}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 3. Call Sticky Notes */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText size={18} />
-                  Call Notes
-                </CardTitle>
-                <CardDescription>
-                  Sticky notes created during the call
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3">
-                  {mockStickyNotes.map((note) => (
-                    <div
-                      key={note.id}
-                      className={clsx(
-                        "p-3 rounded-md border-l-4 relative group",
-                        getStickyNoteColor(note.color)
-                      )}
-                    >
-                      <p className="text-sm leading-relaxed pr-8">{note.content}</p>
-                      <div className="text-xs opacity-70 mt-2">
-                        {note.createdAt.toLocaleTimeString()}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleCopyText(note.content, note.id)}
-                        className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Copy note"
-                      >
-                        {copiedItems.has(note.id) ? (
-                          <Check size={12} className="text-green-600" />
-                        ) : (
-                          <Copy size={12} />
+                        {callDetails.customerInfo && (
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Customer</label>
+                            <p className="mt-1 text-sm">{callDetails.customerInfo.name}</p>
+                            {callDetails.customerInfo.phone && (
+                              <p className="text-xs text-muted-foreground">{callDetails.customerInfo.phone}</p>
+                            )}
+                          </div>
                         )}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Panel - Call Summary & AI Chat */}
-          <div className="w-1/2 p-6 overflow-y-auto">
-            
-            {/* 4. Call Summary (Document-Style Space) */}
-            <Card className="mb-6">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText size={18} />
-                    Call Summary
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    {!isEditingCallSummary && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleGenerateAiSummary}
-                        className="flex items-center gap-2"
-                      >
-                        <Zap size={14} />
-                        Generate AI Summary
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsEditingCallSummary(!isEditingCallSummary)}
-                    >
-                      {isEditingCallSummary ? 'Save' : 'Edit'}
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {isEditingCallSummary ? (
-                  <textarea
-                    value={callSummary}
-                    onChange={(e) => setCallSummary(e.target.value)}
-                    placeholder="Enter call summary or use AI generation..."
-                    rows={8}
-                    className="w-full p-3 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-vertical"
-                  />
-                ) : (
-                  <div className="min-h-32 p-3 bg-muted/30 rounded-md">
-                    {callSummary ? (
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{callSummary}</p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">
-                        No summary available. Click "Edit" to add notes or "Generate AI Summary" for automatic generation.
-                      </p>
-                    )}
-                  </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
-              </CardContent>
-            </Card>
 
-            {/* 5. AI Chat History */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare size={18} />
-                  AI Chat History
-                </CardTitle>
-                <CardDescription>
-                  Agent-AI conversation during this call
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {mockChatHistory.map((message) => (
-                    <div
-                      key={message.id}
-                      className={clsx(
-                        "p-3 rounded-md relative group",
-                        message.sender === 'agent'
-                          ? "bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500"
-                          : "bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500"
-                      )}
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={clsx(
-                          "text-xs font-medium px-2 py-1 rounded",
-                          message.sender === 'agent'
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200"
-                            : "bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-200"
-                        )}>
-                          {message.sender === 'agent' ? 'Agent' : 'AI Assistant'}
-                        </span>
-                        {message.aiResponseLevel && (
-                          <Badge variant="default" className="text-xs border border-gray-300">
-                            {message.aiResponseLevel}
-                          </Badge>
-                        )}
-                        <span className="text-xs text-muted-foreground ml-auto">
-                          {message.timestamp.toLocaleTimeString()}
-                        </span>
+                {/* Loading State */}
+                {loading && (
+                  <Card>
+                    <CardContent className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      <span className="ml-2 text-muted-foreground">Loading call data...</span>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Call Transcript */}
+                {callTranscript.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <h3 className="text-lg font-medium flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5" />
+                        Call Transcript
+                      </h3>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3 max-h-64 overflow-y-auto">
+                        {callTranscript.map((segment, index) => (
+                          <div key={index} className={`p-3 rounded-lg ${
+                            segment.speaker === 'agent' 
+                              ? 'bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500' 
+                              : 'bg-gray-50 dark:bg-gray-950/30 border-l-4 border-gray-500'
+                          }`}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium capitalize">
+                                {segment.speaker === 'agent' ? 'Agent' : 'Customer'}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(segment.timestamp).toLocaleTimeString()}
+                              </span>
+                            </div>
+                            <p className="text-sm">{segment.text}</p>
+                            {segment.sentiment && (
+                              <span className={`inline-block mt-1 px-2 py-1 rounded-full text-xs ${
+                                segment.sentiment === 'positive' ? 'bg-green-100 text-green-800' :
+                                segment.sentiment === 'negative' ? 'bg-red-100 text-red-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {segment.sentiment}
+                              </span>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                      <p className="text-sm leading-relaxed pr-8">{message.content}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleCopyText(message.content, message.id)}
-                        className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Copy message"
-                      >
-                        {copiedItems.has(message.id) ? (
-                          <Check size={12} className="text-green-500" />
-                        ) : (
-                          <Copy size={12} />
-                        )}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* AI Chat Messages */}
+                {aiChatMessages.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <h3 className="text-lg font-medium flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5" />
+                        AI Chat History
+                      </h3>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3 max-h-64 overflow-y-auto">
+                        {aiChatMessages.map((message, index) => (
+                          <div key={index} className={`p-3 rounded-lg ${
+                            message.sender === 'agent' 
+                              ? 'bg-blue-50 dark:bg-blue-950/30' 
+                              : 'bg-green-50 dark:bg-green-950/30'
+                          }`}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium">
+                                {message.sender === 'agent' ? 'Agent' : 'AI Assistant'}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(message.timestamp).toLocaleTimeString()}
+                              </span>
+                            </div>
+                            <p className="text-sm">{message.content}</p>
+                            {message.confidence && (
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                Confidence: {Math.round(message.confidence * 100)}%
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Call Notes */}
+                {callNotes.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <h3 className="text-lg font-medium flex items-center gap-2">
+                        <FileText className="w-5 h-5" />
+                        Call Notes
+                      </h3>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {callNotes.map((note, index) => (
+                          <div key={index} className="p-3 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                            <p className="text-sm">{note.content}</p>
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              Created: {new Date(note.createdAt).toLocaleString()}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-border p-4">
+          <div className="flex justify-end">
+            <Button onClick={onClose}>
+              Close
+            </Button>
           </div>
         </div>
       </div>

@@ -2,7 +2,7 @@ import { clsx } from "clsx";
 
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: "default" | "success" | "warning" | "danger" | "info";
+  variant?: "default" | "success" | "warning" | "danger" | "info" | "urgent" | "high" | "medium" | "low" | "destructive" | "secondary" | "outline";
   size?: "sm" | "md" | "lg";
   className?: string;
 }
@@ -19,6 +19,13 @@ export function Badge({
     warning: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400",
     danger: "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400",
     info: "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400",
+    urgent: "bg-red-500 text-white",
+    high: "bg-orange-500 text-white",
+    medium: "bg-yellow-500 text-white",
+    low: "bg-gray-500 text-white",
+    destructive: "bg-red-500 text-white",
+    secondary: "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200",
+    outline: "border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300",
   };
 
   const sizeClasses = {

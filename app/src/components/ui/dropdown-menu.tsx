@@ -32,15 +32,31 @@ function DropdownMenu({ children }: DropdownMenuProps) {
 
 interface DropdownMenuTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode
+  asChild?: boolean
 }
 
-function DropdownMenuTrigger({ children, className, ...props }: DropdownMenuTriggerProps) {
+function DropdownMenuTrigger({ children, className, asChild = false, ...props }: DropdownMenuTriggerProps) {
   const { open, setOpen } = useDropdownMenu()
+
+  const handleClick = () => setOpen(!open)
+
+  if (asChild && React.isValidElement(children)) {
+    const childProps = children.props as any
+    return React.cloneElement(children, {
+      ...childProps,
+      onClick: (e: React.MouseEvent) => {
+        childProps.onClick?.(e)
+        handleClick()
+      },
+      'aria-expanded': open,
+      className: cn(childProps.className, className)
+    })
+  }
 
   return (
     <button
       className={cn("outline-none", className)}
-      onClick={() => setOpen(!open)}
+      onClick={handleClick}
       aria-expanded={open}
       {...props}
     >
