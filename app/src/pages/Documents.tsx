@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   Upload, 
   FileText, 
@@ -13,7 +14,6 @@ import {
   Eye,
   Calendar,
   User,
-  X,
   Paperclip,
   Grid3X3,
   List,
@@ -22,35 +22,103 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  Pause
+  Pause,
+  Loader2,
+  Trash2
 } from "lucide-react";
+import { DocumentSearch } from "../components/search/DocumentSearch";
+import { toast } from "sonner";
 
-// IMPLEMENT LATER: Expected data structure for documents in backend (Supabase Storage)
-// Document interface:
-// interface Document {
-//   id: string;
-//   fileName: string;
-//   originalName: string;
-//   fileType: string;
-//   fileSize: number;
-//   url: string;
-//   thumbnailUrl?: string;
-//   uploadedBy: string;
-//   uploadedByName: string;
-//   uploadDate: Date;
-//   lastModified: Date;
-//   category?: string;
-//   tags?: string[];
-//   description?: string;
-//   isPublic: boolean;
-//   downloadCount: number;
-//   ticketId?: string; // Associated ticket ID
-//   metadata?: {
-//     duration?: number; // for video files
-//     dimensions?: { width: number; height: number }; // for images
-//     pages?: number; // for PDFs
-//   };
-// }
+// Helper function to format date
+const formatDate = (dateInput: string | Date) => {
+  try {
+    const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (error) {
+    return 'Invalid date';
+  }
+};
+
+// Helper function to get access token from localStorage
+const getAccessToken = () => {
+  try {
+    const storedTokens = localStorage.getItem('navis-auth-tokens');
+    if (storedTokens) {
+      const tokens = JSON.parse(storedTokens);
+      return tokens.access_token;
+    }
+  } catch (error) {
+    console.error('Error getting access token:', error);
+  }
+  return null;
+};
+
+// Document interfaces for type safety
+interface Document {
+  id: string;
+  fileName: string;
+  originalName: string;
+  fileType: string;
+  fileSize: number;
+  url: string;
+  downloadUrl?: string;
+  thumbnailUrl?: string;
+  uploadedBy: string;
+  uploadedByName: string;
+  uploadDate: string | Date;
+  lastModified: string | Date;
+  category?: string;
+  tags?: string[];
+  description?: string;
+  isPublic: boolean;
+  downloadCount: number;
+  viewCount?: number;
+  ticketId?: string;
+  callId?: string;
+  customerId?: string;
+  knowledgeBaseId?: string;
+  metadata?: any;
+  processing?: {
+    status: string;
+    progress: number;
+    jobType: string;
+  };
+  relatedDocuments?: Document[];
+}
+
+interface UploadResult {
+  success: boolean;
+  document?: Document;
+  error?: string;
+}
+
+interface DocumentListResponse {
+  success: boolean;
+  documents: Document[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+  filters: {
+    category?: string;
+    search?: string;
+    fileType?: string;
+    ticketId?: string;
+    callId?: string;
+    sort: string;
+    order: string;
+  };
+}
 
 // IMPLEMENT LATER: Expected data structure for ticket documents
 // TicketDocument interface:
@@ -376,7 +444,8 @@ const mockTicketDocuments = [
 const fileTypeCategories = ["All", "Training", "Marketing", "Technical", "Branding", "Reports"];
 const ticketStatusCategories = ["All", "active", "pending", "resolved", "closed"];
 
-const getFileIcon = (fileType: string) => {
+const getFileIcon = (fileType: string | undefined) => {
+  if (!fileType) return <File className="w-5 h-5" />;
   if (fileType.startsWith("image/")) return <Image className="w-5 h-5" />;
   if (fileType.startsWith("video/")) return <FileVideo className="w-5 h-5" />;
   if (fileType.includes("pdf")) return <FileText className="w-5 h-5" />;
@@ -436,19 +505,10 @@ const formatFileSize = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 };
 
-const formatDate = (date: Date) => {
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-};
-
 export default function Documents() {
-  const [documents, setDocuments] = useState(mockDocuments);
-  const [filteredDocuments, setFilteredDocuments] = useState(mockDocuments);
+  const { user } = useAuth();
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([]);
   const [ticketDocuments, setTicketDocuments] = useState(mockTicketDocuments);
   const [filteredTicketDocuments, setFilteredTicketDocuments] = useState(mockTicketDocuments);
   const [activeTab, setActiveTab] = useState<"documents" | "tickets">("documents");
@@ -458,15 +518,225 @@ export default function Documents() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Filter documents based on search query and category
+  // API Configuration
+  const API_BASE_URL = process.env.REACT_APP_SUPABASE_URL || 'https://fjdurojwqtqoydmqjvmk.supabase.co';
+  const API_FUNCTIONS_URL = `${API_BASE_URL}/functions/v1`;
+
+  // Get auth headers for API calls
+  const getAuthHeaders = useCallback(() => {
+    return {
+      'Authorization': `Bearer ${getAccessToken()}`,
+      'Content-Type': 'application/json'
+    };
+  }, []);
+
+  // Fetch documents from backend
+  const fetchDocuments = useCallback(async (options: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    category?: string;
+    fileType?: string;
+    sort?: string;
+    order?: string;
+  } = {}) => {
+    const accessToken = getAccessToken();
+    if (!accessToken) return;
+
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: (options.page || pagination.page).toString(),
+        limit: (options.limit || pagination.limit).toString(),
+        sort: options.sort || 'upload_date',
+        order: options.order || 'desc'
+      });
+
+      if (options.search) params.append('search', options.search);
+      if (options.category && options.category !== 'All') params.append('category', options.category);
+      if (options.fileType) params.append('type', options.fileType);
+
+      const response = await fetch(`${API_FUNCTIONS_URL}/list-documents?${params}`, {
+        headers: getAuthHeaders()
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch documents');
+      }
+
+      const data: DocumentListResponse = await response.json();
+      
+      if (data.success) {
+        setDocuments(data.documents);
+        setFilteredDocuments(data.documents);
+        setPagination(data.pagination);
+      } else {
+        throw new Error('Failed to fetch documents');
+      }
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+      toast.error('Failed to load documents');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [getAccessToken(), pagination.page, pagination.limit, API_FUNCTIONS_URL, getAuthHeaders]);
+
+  // Upload documents to backend
+  const uploadDocument = useCallback(async (file: File, options: {
+    category?: string;
+    description?: string;
+    isPublic?: boolean;
+    ticketId?: string;
+    callId?: string;
+  } = {}): Promise<UploadResult> => {
+    if (!getAccessToken()) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (options.category) formData.append('category', options.category);
+      if (options.description) formData.append('description', options.description);
+      formData.append('isPublic', (options.isPublic || true).toString());
+      if (options.ticketId) formData.append('ticketId', options.ticketId);
+      if (options.callId) formData.append('callId', options.callId);
+
+      const response = await fetch(`${API_FUNCTIONS_URL}/upload-document`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getAccessToken()}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Upload failed');
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        return { success: true, document: data.document };
+      } else {
+        throw new Error(data.error || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Upload failed' 
+      };
+    }
+  }, [getAccessToken(), API_FUNCTIONS_URL]);
+
+  // Download document
+  const downloadDocument = useCallback(async (documentId: string) => {
+    if (!getAccessToken()) return;
+
+    try {
+      const response = await fetch(`${API_FUNCTIONS_URL}/download-document/${documentId}`, {
+        headers: {
+          'Authorization': `Bearer ${getAccessToken()}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+
+      // Handle different response types
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType?.includes('application/json')) {
+        // If we get JSON, it might be an error or redirect
+        const data = await response.json();
+        if (data.error) {
+          throw new Error(data.error);
+        }
+      } else {
+        // Handle file download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const contentDisposition = response.headers.get('Content-Disposition');
+        const fileName = contentDisposition 
+          ? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
+          : `download-${documentId}`;
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName || 'download';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        toast.success('Download started');
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Failed to download document');
+    }
+  }, [getAccessToken(), API_FUNCTIONS_URL]);
+
+  // Delete document
+  const deleteDocument = useCallback(async (documentId: string) => {
+    if (!getAccessToken()) return;
+
+    try {
+      const response = await fetch(`${API_FUNCTIONS_URL}/delete-document/${documentId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Delete failed');
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Remove document from local state
+        setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+        setFilteredDocuments(prev => prev.filter(doc => doc.id !== documentId));
+        toast.success('Document deleted successfully');
+      } else {
+        throw new Error(data.error || 'Delete failed');
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('Failed to delete document');
+    }
+  }, [getAccessToken(), API_FUNCTIONS_URL, getAuthHeaders]);
+
+  // Load documents on component mount and when auth changes
+  useEffect(() => {
+    if (getAccessToken() && activeTab === 'documents') {
+      fetchDocuments();
+    }
+  }, [getAccessToken(), activeTab, fetchDocuments]);
+
+  // Filter documents locally (for immediate feedback)
   const filterDocuments = useCallback(() => {
     let filtered = documents;
 
     if (searchQuery) {
       filtered = filtered.filter(doc =>
         doc.fileName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doc.originalName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         doc.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         doc.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
       );
@@ -508,82 +778,59 @@ export default function Documents() {
     filterTicketDocuments();
   }, [filterDocuments, filterTicketDocuments]);
 
-  // Handle file upload
-  const handleFileUpload = useCallback((files: FileList | null) => {
-    if (!files) return;
+  // Handle file upload with real backend integration
+  const handleFileUpload = useCallback(async (files: FileList | null) => {
+    if (!files || !getAccessToken()) return;
 
-    Array.from(files).forEach(file => {
-      // IMPLEMENT LATER: Upload to Supabase Storage
-      // const uploadFile = async (file: File) => {
-      //   try {
-      //     const formData = new FormData();
-      //     formData.append('file', file);
-      //     formData.append('category', selectedCategory);
-      //     formData.append('description', ''); // Could add description input
-      //     
-      //     const response = await fetch('/api/documents/upload', {
-      //       method: 'POST',
-      //       body: formData,
-      //       headers: {
-      //         'Authorization': `Bearer ${accessToken}`,
-      //       },
-      //     });
-      //     
-      //     if (!response.ok) throw new Error('Upload failed');
-      //     
-      //     const uploadedDoc = await response.json();
-      //     setDocuments(prev => [uploadedDoc, ...prev]);
-      //     setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
-      //   } catch (error) {
-      //     console.error('Upload error:', error);
-      //     // Handle error (show toast notification)
-      //   }
-      // };
+    const fileArray = Array.from(files);
+    
+    for (const file of fileArray) {
+      const fileKey = `${file.name}-${Date.now()}`;
+      setUploadProgress(prev => ({ ...prev, [fileKey]: 0 }));
 
-      // Mock upload progress for demonstration
-      setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
-      
-      const mockUpload = () => {
-        let progress = 0;
-        const interval = setInterval(() => {
-          progress += 10;
-          setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
-          
-          if (progress >= 100) {
-            clearInterval(interval);
-            // Add mock document to list
-            const mockDoc = {
-              id: `DOC-${Date.now()}`,
-              fileName: file.name,
-              originalName: file.name,
-              fileType: file.type,
-              fileSize: file.size,
-              url: `/documents/${file.name}`,
-              uploadedBy: "current-user",
-              uploadedByName: "Current User",
-              uploadDate: new Date(),
-              lastModified: new Date(),
-              category: selectedCategory === "All" ? "General" : selectedCategory,
-              tags: [],
-              description: "",
-              isPublic: true,
-              downloadCount: 0,
-            };
-            setDocuments(prev => [mockDoc, ...prev]);
-            setTimeout(() => {
-              setUploadProgress(prev => {
-                const newProgress = { ...prev };
-                delete newProgress[file.name];
-                return newProgress;
-              });
-            }, 1000);
-          }
-        }, 200);
-      };
-      
-      mockUpload();
-    });
-  }, [selectedCategory]);
+      try {
+        // Simulate progress updates
+        const progressInterval = setInterval(() => {
+          setUploadProgress(prev => {
+            const currentProgress = prev[fileKey] || 0;
+            if (currentProgress < 90) {
+              return { ...prev, [fileKey]: currentProgress + 10 };
+            }
+            return prev;
+          });
+        }, 100);
+
+        const result = await uploadDocument(file, {
+          category: selectedCategory === "All" ? "General" : selectedCategory,
+          description: "",
+          isPublic: true
+        });
+
+        clearInterval(progressInterval);
+
+        if (result.success && result.document) {
+          setUploadProgress(prev => ({ ...prev, [fileKey]: 100 }));
+          setDocuments(prev => [result.document!, ...prev]);
+          setFilteredDocuments(prev => [result.document!, ...prev]);
+          toast.success(`${file.name} uploaded successfully`);
+        } else {
+          throw new Error(result.error || 'Upload failed');
+        }
+      } catch (error) {
+        console.error('Upload error:', error);
+        toast.error(`Failed to upload ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        // Remove progress after a delay
+        setTimeout(() => {
+          setUploadProgress(prev => {
+            const newProgress = { ...prev };
+            delete newProgress[fileKey];
+            return newProgress;
+          });
+        }, 2000);
+      }
+    }
+  }, [selectedCategory, getAccessToken(), uploadDocument]);
 
   // Handle drag and drop
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -608,49 +855,90 @@ export default function Documents() {
   }, [handleFileUpload]);
 
   // Handle document view
-  const handleViewDocument = useCallback((document: any) => {
-    // IMPLEMENT LATER: Open document viewer or redirect to signed URL
-    // For PDFs, could use a PDF viewer component
-    // For images, could use a lightbox/modal
-    // For videos, could use a video player
-    // For other files, redirect to download
-    
-    // Mock implementation - would open in new tab or modal
-    window.open(document.url, '_blank');
-  }, []);
+  const handleViewDocument = useCallback(async (document: Document) => {
+    if (!getAccessToken()) return;
+
+    try {
+      // For documents already having a signed URL, open directly
+      if (document.url) {
+        window.open(document.url, '_blank');
+        return;
+      }
+
+      // Otherwise fetch document details to get signed URL
+      const response = await fetch(`${API_FUNCTIONS_URL}/get-document/${document.id}`, {
+        headers: getAuthHeaders()
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get document details');
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.document.url) {
+        window.open(data.document.url, '_blank');
+      } else {
+        throw new Error('Document URL not available');
+      }
+    } catch (error) {
+      console.error('View document error:', error);
+      toast.error('Failed to open document');
+    }
+  }, [getAccessToken(), API_FUNCTIONS_URL, getAuthHeaders]);
 
   // Handle document download
-  const handleDownloadDocument = useCallback((document: any) => {
-    // IMPLEMENT LATER: Track download analytics and serve file
-    // const downloadFile = async (documentId: string) => {
-    //   try {
-    //     const response = await fetch(`/api/documents/${documentId}/download`, {
-    //       method: 'GET',
-    //       headers: {
-    //         'Authorization': `Bearer ${accessToken}`,
-    //       },
-    //     });
-    //     
-    //     if (!response.ok) throw new Error('Download failed');
-    //     
-    //     const blob = await response.blob();
-    //     const url = window.URL.createObjectURL(blob);
-    //     const a = document.createElement('a');
-    //     a.href = url;
-    //     a.download = document.originalName;
-    //     a.click();
-    //     window.URL.revokeObjectURL(url);
-    //   } catch (error) {
-    //     console.error('Download error:', error);
-    //   }
-    // };
+  const handleDownloadDocument = useCallback((document: Document) => {
+    downloadDocument(document.id);
+  }, [downloadDocument]);
+
+  // Handle document deletion with confirmation
+  const handleDeleteDocument = useCallback(async (document: Document) => {
+    if (!window.confirm(`Are you sure you want to delete "${document.originalName}"?`)) {
+      return;
+    }
     
-    // Mock download
-    const link = document.createElement('a');
-    link.href = document.url;
-    link.download = document.originalName;
-    link.click();
-  }, []);
+    await deleteDocument(document.id);
+  }, [deleteDocument]);
+
+  // Handle search with backend integration
+  const handleSearch = useCallback(async (query: string) => {
+    setSearchQuery(query);
+    
+    if (activeTab === 'documents') {
+      // Debounce search requests
+      setTimeout(() => {
+        fetchDocuments({
+          search: query,
+          category: selectedCategory,
+          page: 1 // Reset to first page for new search
+        });
+      }, 300);
+    }
+  }, [activeTab, selectedCategory, fetchDocuments]);
+
+  // Handle category change with backend integration
+  const handleCategoryChange = useCallback((category: string) => {
+    setSelectedCategory(category);
+    
+    if (activeTab === 'documents') {
+      fetchDocuments({
+        search: searchQuery,
+        category: category,
+        page: 1 // Reset to first page for new filter
+      });
+    }
+  }, [activeTab, searchQuery, fetchDocuments]);
+
+  // Handle pagination
+  const handlePageChange = useCallback((newPage: number) => {
+    setPagination(prev => ({ ...prev, page: newPage }));
+    fetchDocuments({
+      search: searchQuery,
+      category: selectedCategory,
+      page: newPage
+    });
+  }, [searchQuery, selectedCategory, fetchDocuments]);
 
   return (
     <div className="p-6 space-y-6">
@@ -758,8 +1046,29 @@ export default function Documents() {
         </Card>
       )}
 
-      {/* Search and Filter */}
+      {/* AI-Powered Semantic Search */}
+      <Card className="p-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-medium text-foreground mb-2">AI-Powered Document Search</h2>
+          <p className="text-sm text-muted-foreground">
+            Search through document content using natural language and semantic understanding
+          </p>
+        </div>
+        <DocumentSearch 
+          onResultClick={(result) => {
+            // Handle semantic search result click
+            console.log('Semantic search result clicked:', result);
+            // Could open document viewer, navigate to document, etc.
+          }}
+        />
+      </Card>
+
+      {/* Basic Search and Filter */}
       <Card className="p-4">
+        <div className="mb-3">
+          <h3 className="text-sm font-medium text-foreground mb-1">Basic Search & Filter</h3>
+          <p className="text-xs text-muted-foreground">Filter documents by name, category, and metadata</p>
+        </div>
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -771,7 +1080,7 @@ export default function Documents() {
                   : "Search tickets and documents..."
               }
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
             />
           </div>
@@ -781,7 +1090,7 @@ export default function Documents() {
               value={activeTab === "documents" ? selectedCategory : selectedTicketStatus}
               onChange={(e) => 
                 activeTab === "documents" 
-                  ? setSelectedCategory(e.target.value)
+                  ? handleCategoryChange(e.target.value)
                   : setSelectedTicketStatus(e.target.value)
               }
               className="px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
@@ -801,15 +1110,27 @@ export default function Documents() {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-medium text-foreground">
             {activeTab === "documents" 
-              ? `Documents (${filteredDocuments.length})`
+              ? `Documents (${pagination.total})`
               : `Tickets with Documents (${filteredTicketDocuments.length})`
             }
           </h2>
+          {isLoading && (
+            <div className="flex items-center space-x-2 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">Loading...</span>
+            </div>
+          )}
         </div>
 
         {activeTab === "documents" ? (
           // Regular Documents View
-          filteredDocuments.length === 0 ? (
+          isLoading && documents.length === 0 ? (
+            <div className="text-center py-12">
+              <Loader2 className="w-16 h-16 text-muted-foreground mx-auto mb-4 animate-spin" />
+              <h3 className="text-lg font-medium text-foreground mb-2">Loading documents...</h3>
+              <p className="text-muted-foreground">Please wait while we fetch your documents</p>
+            </div>
+          ) : filteredDocuments.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">No documents found</h3>
@@ -820,77 +1141,67 @@ export default function Documents() {
               </p>
             </div>
           ) : (
-            <div className={
-              viewMode === "grid" 
-                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-                : "space-y-3"
-            }>
-              {filteredDocuments.map((document) => (
-                <div
-                  key={document.id}
-                  className={`border border-border rounded-lg p-4 hover:shadow-md transition-shadow bg-card ${
-                    viewMode === "list" ? "flex items-center space-x-4" : ""
-                  }`}
-                >
-                  {viewMode === "grid" ? (
-                    // Grid View
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2">
-                        {getFileIcon(document.fileType)}
-                        <span className="text-sm text-muted-foreground">{document.fileType.split('/')[1]?.toUpperCase()}</span>
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-foreground truncate" title={document.originalName}>
-                          {document.originalName}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                          {document.description || "No description"}
-                        </p>
-                      </div>
-                      <div className="space-y-1 text-xs text-muted-foreground">
-                        <div className="flex items-center space-x-1">
-                          <User className="w-3 h-3" />
-                          <span>{document.uploadedByName}</span>
+            <>
+              <div className={
+                viewMode === "grid" 
+                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                  : "space-y-3"
+              }>
+                {filteredDocuments.map((document) => (
+                  <div
+                    key={document.id}
+                    className={`border border-border rounded-lg p-4 hover:shadow-md transition-shadow bg-card ${
+                      viewMode === "list" ? "flex items-center space-x-4" : ""
+                    }`}
+                  >
+                    {viewMode === "grid" ? (
+                      // Grid View
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            {getFileIcon(document.fileType)}
+                            <span className="text-sm text-muted-foreground">
+                              {document.fileType?.split('/')[1]?.toUpperCase()}
+                            </span>
+                          </div>
+                          {document.processing && (
+                            <div className="flex items-center space-x-1">
+                              {document.processing.status === 'processing' ? (
+                                <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                              ) : document.processing.status === 'completed' ? (
+                                <CheckCircle className="w-3 h-3 text-green-500" />
+                              ) : document.processing.status === 'failed' ? (
+                                <XCircle className="w-3 h-3 text-red-500" />
+                              ) : null}
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="w-3 h-3" />
-                          <span>{formatDate(document.uploadDate)}</span>
-                        </div>
-                        <div>{formatFileSize(document.fileSize)}</div>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewDocument(document)}
-                        >
-                          <Eye className="w-3 h-3 mr-1" />
-                          View
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDownloadDocument(document)}
-                        >
-                          <Download className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    // List View
-                    <div className="flex-1 flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        {getFileIcon(document.fileType)}
                         <div>
-                          <h3 className="font-medium text-foreground">{document.originalName}</h3>
-                          <p className="text-sm text-muted-foreground">{document.description || "No description"}</p>
+                          <h3 className="font-medium text-foreground truncate" title={document.originalName}>
+                            {document.originalName}
+                          </h3>
+                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                            {document.description || "No description"}
+                          </p>
                         </div>
-                      </div>
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                        <span>{document.uploadedByName}</span>
-                        <span>{formatDate(document.uploadDate)}</span>
-                        <span>{formatFileSize(document.fileSize)}</span>
-                        <div className="flex items-center space-x-2">
+                        <div className="space-y-1 text-xs text-muted-foreground">
+                          <div className="flex items-center space-x-1">
+                            <User className="w-3 h-3" />
+                            <span>{document.uploadedByName}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Calendar className="w-3 h-3" />
+                            <span>{formatDate(new Date(document.uploadDate))}</span>
+                          </div>
+                          <div>{formatFileSize(document.fileSize)}</div>
+                          {document.downloadCount > 0 && (
+                            <div className="flex items-center space-x-1">
+                              <Download className="w-3 h-3" />
+                              <span>{document.downloadCount} downloads</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex justify-between items-center">
                           <Button
                             variant="outline"
                             size="sm"
@@ -899,20 +1210,107 @@ export default function Documents() {
                             <Eye className="w-3 h-3 mr-1" />
                             View
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDownloadDocument(document)}
-                          >
-                            <Download className="w-3 h-3" />
-                          </Button>
+                          <div className="flex items-center space-x-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDownloadDocument(document)}
+                            >
+                              <Download className="w-3 h-3" />
+                            </Button>
+                            {document.uploadedBy === user?.id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteDocument(document)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      // List View
+                      <div className="flex-1 flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          {getFileIcon(document.fileType)}
+                          <div>
+                            <h3 className="font-medium text-foreground">{document.originalName}</h3>
+                            <p className="text-sm text-muted-foreground">{document.description || "No description"}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                          <span>{document.uploadedByName}</span>
+                          <span>{formatDate(new Date(document.uploadDate))}</span>
+                          <span>{formatFileSize(document.fileSize)}</span>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewDocument(document)}
+                            >
+                              <Eye className="w-3 h-3 mr-1" />
+                              View
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDownloadDocument(document)}
+                            >
+                              <Download className="w-3 h-3" />
+                            </Button>
+                            {document.uploadedBy === user?.id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteDocument(document)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {pagination.totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                    {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+                    {pagination.total} documents
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={!pagination.hasPrevPage}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Page {pagination.page} of {pagination.totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={!pagination.hasNextPage}
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )
         ) : (
           // Ticket Documents View

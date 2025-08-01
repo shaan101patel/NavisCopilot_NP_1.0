@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navis Copilot - Document Processing Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .section h2 {
+            color: #555;
+            margin-top: 0;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #007cba;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #005a87;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .results {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            color: #28a745;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .info {
+            color: #17a2b8;
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+        }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #007cba;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-pending { background-color: #ffc107; }
+        .status-processing { background-color: #007cba; }
+        .status-completed { background-color: #28a745; }
+        .status-failed { background-color: #dc3545; }
+        .document-item {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            border-left: 4px solid #007cba;
+        }
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            background: #f8f9fa;
+            margin-right: 2px;
+        }
+        .tab.active {
+            background: white;
+            border-color: #ddd;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Navis Copilot - Document Processing Test</h1>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('upload')">Upload & Process</div>
+            <div class="tab" onclick="switchTab('status')">Status Check</div>
+            <div class="tab" onclick="switchTab('search')">Search Test</div>
+            <div class="tab" onclick="switchTab('config')">Configuration</div>
+        </div>
+
+        <!-- Upload & Process Tab -->
+        <div id="upload" class="tab-content active">
+            <div class="section">
+                <h2>📄 Document Upload & Processing</h2>
+                <div class="form-group">
+                    <label for="fileInput">Select Document:</label>
+                    <input type="file" id="fileInput" accept=".txt,.pdf,.docx,.pptx">
+                    <small>Supported formats: TXT, PDF, DOCX, PPTX</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="userId">User ID:</label>
+                    <input type="text" id="userId" value="test-user-123" placeholder="Enter user ID">
+                </div>
+                
+                <div class="form-group">
+                    <label for="chunkSize">Chunk Size (characters):</label>
+                    <input type="number" id="chunkSize" value="1000" min="100" max="4000">
+                </div>
+                
+                <div class="form-group">
+                    <label for="chunkOverlap">Chunk Overlap (characters):</label>
+                    <input type="number" id="chunkOverlap" value="100" min="0" max="500">
+                </div>
+                
+                <button onclick="uploadAndProcess()" id="uploadBtn">Upload & Process Document</button>
+                <button onclick="processExistingDocument()" id="processBtn">Process Existing Document</button>
+                
+                <div id="uploadProgress" class="progress" style="display: none;">
+                    <div id="uploadProgressBar" class="progress-bar" style="width: 0%;">0%</div>
+                </div>
+                
+                <div id="uploadResults" class="results" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Status Check Tab -->
+        <div id="status" class="tab-content">
+            <div class="section">
+                <h2>📊 Document Status & Management</h2>
+                <button onclick="loadDocuments()">Refresh Document List</button>
+                <button onclick="clearDocuments()">Clear Test Documents</button>
+                
+                <div id="documentsList" class="results" style="margin-top: 15px;">
+                    <p>Click "Refresh Document List" to load documents...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Test Tab -->
+        <div id="search" class="tab-content">
+            <div class="section">
+                <h2>🔍 Vector Search Test</h2>
+                <div class="form-group">
+                    <label for="searchQuery">Search Query:</label>
+                    <input type="text" id="searchQuery" placeholder="Enter search query..." value="project management">
+                </div>
+                
+                <div class="form-group">
+                    <label for="searchLimit">Number of Results:</label>
+                    <input type="number" id="searchLimit" value="5" min="1" max="20">
+                </div>
+                
+                <button onclick="testSearch()">Search Documents</button>
+                <button onclick="testChunkSearch()">Search Chunks</button>
+                
+                <div id="searchResults" class="results" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Configuration Tab -->
+        <div id="config" class="tab-content">
+            <div class="section">
+                <h2>⚙️ Configuration</h2>
+                <div class="form-group">
+                    <label for="supabaseUrl">Supabase URL:</label>
+                    <input type="url" id="supabaseUrl" placeholder="https://your-project.supabase.co">
+                </div>
+                
+                <div class="form-group">
+                    <label for="supabaseKey">Supabase Anon Key:</label>
+                    <input type="password" id="supabaseKey" placeholder="Enter your anon key">
+                </div>
+                
+                <div class="form-group">
+                    <label for="edgeFunctionUrl">Edge Function URL:</label>
+                    <input type="url" id="edgeFunctionUrl" placeholder="https://your-project.supabase.co/functions/v1/process-document">
+                </div>
+                
+                <button onclick="saveConfig()">Save Configuration</button>
+                <button onclick="loadConfig()">Load Configuration</button>
+                <button onclick="testConnection()">Test Connection</button>
+                
+                <div id="configResults" class="results" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2'
+        
+        let supabase = null
+        let edgeFunctionUrl = ''
+
+        // Initialize with saved config
+        window.addEventListener('load', () => {
+            loadConfig()
+        })
+
+        // Tab switching
+        window.switchTab = (tabName) => {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active')
+            })
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active')
+            })
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active')
+            event.target.classList.add('active')
+        }
+
+        // Configuration functions
+        window.saveConfig = () => {
+            const config = {
+                supabaseUrl: document.getElementById('supabaseUrl').value,
+                supabaseKey: document.getElementById('supabaseKey').value,
+                edgeFunctionUrl: document.getElementById('edgeFunctionUrl').value
+            }
+            
+            localStorage.setItem('navisConfig', JSON.stringify(config))
+            showResult('configResults', 'Configuration saved successfully!', 'success')
+            
+            // Reinitialize Supabase client
+            if (config.supabaseUrl && config.supabaseKey) {
+                supabase = createClient(config.supabaseUrl, config.supabaseKey)
+                edgeFunctionUrl = config.edgeFunctionUrl
+            }
+        }
+
+        window.loadConfig = () => {
+            const savedConfig = localStorage.getItem('navisConfig')
+            if (savedConfig) {
+                const config = JSON.parse(savedConfig)
+                document.getElementById('supabaseUrl').value = config.supabaseUrl || ''
+                document.getElementById('supabaseKey').value = config.supabaseKey || ''
+                document.getElementById('edgeFunctionUrl').value = config.edgeFunctionUrl || ''
+                
+                if (config.supabaseUrl && config.supabaseKey) {
+                    supabase = createClient(config.supabaseUrl, config.supabaseKey)
+                    edgeFunctionUrl = config.edgeFunctionUrl
+                }
+                
+                showResult('configResults', 'Configuration loaded from localStorage', 'info')
+            } else {
+                showResult('configResults', 'No saved configuration found', 'info')
+            }
+        }
+
+        window.testConnection = async () => {
+            if (!supabase) {
+                showResult('configResults', 'Please configure Supabase settings first', 'error')
+                return
+            }
+
+            try {
+                const { data, error } = await supabase.from('documents').select('count').limit(1)
+                if (error) throw error
+                showResult('configResults', 'Connection successful! Database is accessible.', 'success')
+            } catch (error) {
+                showResult('configResults', `Connection failed: ${error.message}`, 'error')
+            }
+        }
+
+        // Upload and processing functions
+        window.uploadAndProcess = async () => {
+            const fileInput = document.getElementById('fileInput')
+            const userId = document.getElementById('userId').value
+            const chunkSize = parseInt(document.getElementById('chunkSize').value)
+            const chunkOverlap = parseInt(document.getElementById('chunkOverlap').value)
+
+            if (!fileInput.files[0]) {
+                showResult('uploadResults', 'Please select a file first', 'error')
+                return
+            }
+
+            if (!supabase) {
+                showResult('uploadResults', 'Please configure Supabase settings first', 'error')
+                return
+            }
+
+            const file = fileInput.files[0]
+            const uploadBtn = document.getElementById('uploadBtn')
+            
+            try {
+                uploadBtn.disabled = true
+                showProgress(0, 'Uploading file...')
+                
+                // Upload file to Supabase Storage
+                const fileName = `${Date.now()}_${file.name}`
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('documents')
+                    .upload(fileName, file)
+
+                if (uploadError) throw uploadError
+                showProgress(25, 'File uploaded, creating document record...')
+
+                // Create document record
+                const { data: docData, error: docError } = await supabase
+                    .from('documents')
+                    .insert({
+                        file_name: fileName,
+                        original_name: file.name,
+                        file_extension: file.name.split('.').pop(),
+                        file_size: file.size,
+                        storage_path: fileName,
+                        uploaded_by: userId,
+                        processing_status: 'pending'
+                    })
+                    .select()
+                    .single()
+
+                if (docError) throw docError
+                showProgress(50, 'Document record created, starting processing...')
+
+                // Call Edge Function to process document
+                const response = await fetch(edgeFunctionUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${document.getElementById('supabaseKey').value}`
+                    },
+                    body: JSON.stringify({
+                        documentId: docData.id,
+                        userId: userId,
+                        chunkSize: chunkSize,
+                        chunkOverlap: chunkOverlap
+                    })
+                })
+
+                const result = await response.json()
+                showProgress(100, 'Processing completed!')
+
+                if (result.success) {
+                    showResult('uploadResults', 
+                        `✅ Document processed successfully!\n` +
+                        `📄 Document ID: ${result.documentId}\n` +
+                        `📊 Chunks created: ${result.chunksCreated}\n` +
+                        `⏱️ Processing time: ${result.processingTime}ms`, 
+                        'success')
+                } else {
+                    showResult('uploadResults', 
+                        `❌ Processing failed: ${result.error.message}\n` +
+                        `🔍 Error code: ${result.error.code}`, 
+                        'error')
+                }
+
+            } catch (error) {
+                showResult('uploadResults', `Error: ${error.message}`, 'error')
+            } finally {
+                uploadBtn.disabled = false
+                setTimeout(() => hideProgress(), 2000)
+            }
+        }
+
+        window.processExistingDocument = async () => {
+            const documentId = prompt('Enter Document ID to process:')
+            const userId = document.getElementById('userId').value
+
+            if (!documentId || !userId) {
+                showResult('uploadResults', 'Document ID and User ID are required', 'error')
+                return
+            }
+
+            if (!edgeFunctionUrl) {
+                showResult('uploadResults', 'Please configure Edge Function URL first', 'error')
+                return
+            }
+
+            try {
+                showProgress(0, 'Starting document processing...')
+                
+                const response = await fetch(edgeFunctionUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${document.getElementById('supabaseKey').value}`
+                    },
+                    body: JSON.stringify({
+                        documentId: documentId,
+                        userId: userId,
+                        chunkSize: parseInt(document.getElementById('chunkSize').value),
+                        chunkOverlap: parseInt(document.getElementById('chunkOverlap').value)
+                    })
+                })
+
+                const result = await response.json()
+                showProgress(100, 'Processing completed!')
+
+                if (result.success) {
+                    showResult('uploadResults', 
+                        `✅ Document processed successfully!\n` +
+                        `📄 Document ID: ${result.documentId}\n` +
+                        `📊 Chunks created: ${result.chunksCreated}\n` +
+                        `⏱️ Processing time: ${result.processingTime}ms`, 
+                        'success')
+                } else {
+                    showResult('uploadResults', 
+                        `❌ Processing failed: ${result.error.message}\n` +
+                        `🔍 Error code: ${result.error.code}`, 
+                        'error')
+                }
+
+            } catch (error) {
+                showResult('uploadResults', `Error: ${error.message}`, 'error')
+            } finally {
+                setTimeout(() => hideProgress(), 2000)
+            }
+        }
+
+        // Document management functions
+        window.loadDocuments = async () => {
+            if (!supabase) {
+                showResult('documentsList', 'Please configure Supabase settings first', 'error')
+                return
+            }
+
+            try {
+                const { data, error } = await supabase
+                    .from('documents')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(20)
+
+                if (error) throw error
+
+                if (data.length === 0) {
+                    document.getElementById('documentsList').innerHTML = '<p>No documents found</p>'
+                    return
+                }
+
+                let html = '<h3>Recent Documents:</h3>'
+                data.forEach(doc => {
+                    const statusClass = `status-${doc.processing_status}`
+                    html += `
+                        <div class="document-item">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>${doc.original_name}</strong>
+                                    <br>
+                                    <small>ID: ${doc.id}</small>
+                                </div>
+                                <div>
+                                    <span class="status-indicator ${statusClass}"></span>
+                                    ${doc.processing_status}
+                                </div>
+                            </div>
+                            <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                                📊 Chunks: ${doc.chunk_count || 0} | 
+                                📏 Size: ${Math.round(doc.file_size / 1024)}KB | 
+                                📅 ${new Date(doc.created_at).toLocaleString()}
+                            </div>
+                            ${doc.error_message ? `<div style="color: red; font-size: 12px; margin-top: 5px;">❌ ${doc.error_message}</div>` : ''}
+                        </div>
+                    `
+                })
+
+                document.getElementById('documentsList').innerHTML = html
+
+            } catch (error) {
+                showResult('documentsList', `Error loading documents: ${error.message}`, 'error')
+            }
+        }
+
+        window.clearDocuments = async () => {
+            if (!supabase) {
+                showResult('documentsList', 'Please configure Supabase settings first', 'error')
+                return
+            }
+
+            if (!confirm('Are you sure you want to delete all test documents? This cannot be undone.')) {
+                return
+            }
+
+            try {
+                // Delete chunks first (foreign key constraint)
+                await supabase.from('document_chunks').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+                
+                // Delete documents
+                await supabase.from('documents').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+                
+                showResult('documentsList', 'All test documents deleted successfully', 'success')
+                loadDocuments()
+
+            } catch (error) {
+                showResult('documentsList', `Error deleting documents: ${error.message}`, 'error')
+            }
+        }
+
+        // Search functions
+        window.testSearch = async () => {
+            const query = document.getElementById('searchQuery').value
+            const limit = parseInt(document.getElementById('searchLimit').value)
+
+            if (!query.trim()) {
+                showResult('searchResults', 'Please enter a search query', 'error')
+                return
+            }
+
+            if (!supabase) {
+                showResult('searchResults', 'Please configure Supabase settings first', 'error')
+                return
+            }
+
+            try {
+                // Call the search function (you'll need to implement this in your database)
+                const { data, error } = await supabase.rpc('search_documents', {
+                    query_text: query,
+                    match_threshold: 0.7,
+                    match_count: limit
+                })
+
+                if (error) throw error
+
+                let html = `<h3>Search Results for "${query}":</h3>`
+                if (data.length === 0) {
+                    html += '<p>No documents found matching your query.</p>'
+                } else {
+                    data.forEach((doc, index) => {
+                        html += `
+                            <div class="document-item">
+                                <strong>${index + 1}. ${doc.original_name}</strong>
+                                <br>
+                                <small>Similarity: ${Math.round(doc.similarity * 100)}%</small>
+                                <br>
+                                <div style="margin-top: 8px; font-size: 13px;">
+                                    ${doc.content_text ? doc.content_text.substring(0, 200) + '...' : 'No content preview'}
+                                </div>
+                            </div>
+                        `
+                    })
+                }
+
+                showResult('searchResults', html, 'success')
+
+            } catch (error) {
+                showResult('searchResults', `Search error: ${error.message}`, 'error')
+            }
+        }
+
+        window.testChunkSearch = async () => {
+            const query = document.getElementById('searchQuery').value
+            const limit = parseInt(document.getElementById('searchLimit').value)
+
+            if (!query.trim()) {
+                showResult('searchResults', 'Please enter a search query', 'error')
+                return
+            }
+
+            if (!supabase) {
+                showResult('searchResults', 'Please configure Supabase settings first', 'error')
+                return
+            }
+
+            try {
+                // Call the chunk search function
+                const { data, error } = await supabase.rpc('search_document_chunks', {
+                    query_text: query,
+                    match_threshold: 0.7,
+                    match_count: limit
+                })
+
+                if (error) throw error
+
+                let html = `<h3>Chunk Search Results for "${query}":</h3>`
+                if (data.length === 0) {
+                    html += '<p>No chunks found matching your query.</p>'
+                } else {
+                    data.forEach((chunk, index) => {
+                        html += `
+                            <div class="document-item">
+                                <strong>${index + 1}. Chunk ${chunk.chunk_index}</strong>
+                                <br>
+                                <small>Document: ${chunk.document_id} | Similarity: ${Math.round(chunk.similarity * 100)}%</small>
+                                <br>
+                                <div style="margin-top: 8px; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px;">
+                                    ${chunk.content}
+                                </div>
+                            </div>
+                        `
+                    })
+                }
+
+                showResult('searchResults', html, 'success')
+
+            } catch (error) {
+                showResult('searchResults', `Chunk search error: ${error.message}`, 'error')
+            }
+        }
+
+        // Utility functions
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId)
+            element.innerHTML = `<div class="${type}">${message.replace(/\n/g, '<br>')}</div>`
+            element.style.display = 'block'
+        }
+
+        function showProgress(percent, message) {
+            const progressContainer = document.getElementById('uploadProgress')
+            const progressBar = document.getElementById('uploadProgressBar')
+            
+            progressContainer.style.display = 'block'
+            progressBar.style.width = `${percent}%`
+            progressBar.textContent = `${percent}% - ${message}`
+        }
+
+        function hideProgress() {
+            document.getElementById('uploadProgress').style.display = 'none'
+        }
+    </script>
+</body>
+</html>
