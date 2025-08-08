@@ -1,6 +1,6 @@
 ## Navis MVP Frontend Build: Tech Stack, Coding Preferences, and Project Scope
 
-This document guides all frontend development queries and contributions for the Navis MVP, especially when using GitHub Copilot. It aligns with Navis’s product vision, technical requirements, and best practices.
+This document guides all  development queries and contributions for the Navis MVP, especially when using GitHub Copilot. It aligns with Navis’s product vision, technical requirements, and best practices.
 
 ---
 
@@ -22,6 +22,7 @@ Navis is developing an AI-powered customer service and sales platform focused on
 - **Testing:** Jest and React Testing Library for reliable unit and integration testing.
 - **Development Tools:** ESLint, Prettier, and Husky to enforce code quality, formatting, and pre-commit checks.
 - **Deployment:** Vercel or Netlify for fast CI/CD, preview deployments, and custom domain support.
+- **Database/Backend:** Supabase
 
 ---
 

@@ -1,9 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Phone, ChevronLeft, ChevronRight, Bell, MessageSquare, Users, ChevronDown, Check, X, AlertCircle } from "lucide-react";
+import { ticketAPI, type Ticket } from "@/services/tickets";
 
 // IMPLEMENT LATER: Replace this mock data with real data from the backend (Supabase).
 // Expected data structure:
@@ -95,7 +96,10 @@ const mockCurrentInboundNumber = {
 export default function Dashboard() {
   const navigate = useNavigate();
   // IMPLEMENT LATER: Fetch tickets and call data for the current agent from Supabase.
-  const [tickets] = useState(mockTickets);
+  // const [tickets] = useState(mockTickets);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState<boolean>(true);
+  const [ticketsError, setTicketsError] = useState<string | null>(null);
   const [notifications] = useState(mockNotifications);
   const [currentTicketIndex, setCurrentTicketIndex] = useState(0);
 
@@ -109,14 +113,7 @@ export default function Dashboard() {
   const [saveMessage, setSaveMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const [isRequesting, setIsRequesting] = useState(false);
 
-  // IMPLEMENT LATER: Connect to backend call initiation system
   const handleStartCall = () => {
-    // IMPLEMENT LATER: Initiate new call
-    // Expected API call:
-    // - Endpoint: POST /api/calls/initiate
-    // - Payload: { agentId: string, callType: 'outbound' | 'inbound', priority?: string }
-    // - Response: { callId: string, status: 'initializing' | 'ready', sessionInfo: CallSession }
-    // - Redirect to Live Call page with call context
     console.log('Starting new call...');
     navigate('/live-call');
   };
@@ -125,7 +122,27 @@ export default function Dashboard() {
     navigate('/messages');
   };
 
-  // Inbound number configuration functions
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        setTicketsLoading(true);
+        setTicketsError(null);
+        const { tickets: recent } = await ticketAPI.getTickets({ limit: 9, sort: 'created_at', direction: 'desc' });
+        if (isMounted) {
+          setTickets(recent);
+          setCurrentTicketIndex(0);
+        }
+      } catch (e: any) {
+        if (isMounted) setTicketsError(e?.message || 'Failed to load recent tickets');
+      } finally {
+        if (isMounted) setTicketsLoading(false);
+      }
+    })();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Inbound call number configuration functions
   // IMPLEMENT LATER: Connect to backend for inbound number management
   const handleSaveInboundNumber = async () => {
     try {
@@ -250,21 +267,31 @@ export default function Dashboard() {
 
   // Carousel navigation
   const nextTicket = () => {
-    setCurrentTicketIndex((prev) => (prev + 1) % tickets.length);
+    setCurrentTicketIndex((prev) => tickets.length ? (prev + 1) % tickets.length : 0);
   };
 
   const prevTicket = () => {
-    setCurrentTicketIndex((prev) => (prev - 1 + tickets.length) % tickets.length);
+    setCurrentTicketIndex((prev) => tickets.length ? (prev - 1 + tickets.length) % tickets.length : 0);
   };
 
   // Get tickets for carousel display (show 3 at a time)
   const getVisibleTickets = () => {
-    const visibleTickets = [];
-    for (let i = 0; i < Math.min(3, tickets.length); i++) {
-      const index = (currentTicketIndex + i) % tickets.length;
-      visibleTickets.push(tickets[index]);
+    const visibleTickets: Ticket[] = [];
+    const count = Math.min(3, tickets.length);
+    for (let i = 0; i < count; i++) {
+      const index = (currentTicketIndex + i) % (tickets.length || 1);
+      if (tickets[index]) visibleTickets.push(tickets[index]);
     }
     return visibleTickets;
+  };
+
+  const handleViewTicket = (ticketId: string) => {
+    navigate(`/tickets?id=${encodeURIComponent(ticketId)}`);
+  };
+
+  const handleJoinCallForTicket = (ticket: Ticket) => {
+    if (!ticket.call_id) return;
+    navigate(`/live-call?callId=${encodeURIComponent(ticket.call_id)}`);
   };
 
   return (
@@ -498,39 +525,67 @@ export default function Dashboard() {
             </Button>
           </div>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {getVisibleTickets().map((ticket) => (
-            <Card key={ticket.id} className="p-4 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <div className="text-lg font-semibold text-card-foreground">{ticket.customer}</div>
-                <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  ticket.priority === 'urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400' :
-                  ticket.priority === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400' :
-                  ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' :
-                  'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                }`}>
-                  {ticket.priority}
+
+        {ticketsLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i} className="p-4 animate-pulse h-40 bg-muted/40" />
+            ))}
+          </div>
+        ) : ticketsError ? (
+          <div className="p-4 rounded-lg border border-red-200 bg-red-50 text-red-800 flex items-center gap-2">
+            <AlertCircle size={16} />
+            <span className="text-sm">{ticketsError}</span>
+          </div>
+        ) : tickets.length === 0 ? (
+          <div className="p-6 rounded-lg border border-border bg-muted/30 text-muted-foreground">
+            No recent tickets. Create one from the Tickets page.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {getVisibleTickets().map((ticket) => (
+              <Card key={ticket.id} className="p-4 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-lg font-semibold text-card-foreground truncate">{ticket.title}</div>
+                  <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    ticket.priority === 'urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400' :
+                    ticket.priority === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400' :
+                    ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' :
+                    'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                  }`}>
+                    {ticket.priority}
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-1 text-sm text-muted-foreground">
-                <div>ID: {ticket.id}</div>
-                <div>Status: {ticket.status}</div>
-                <div>Call: {ticket.callStatus}</div>
-                <div>Category: {ticket.category}</div>
-              </div>
-              <div className="flex gap-2 mt-2">
-                {/* IMPLEMENT LATER: Wire up these buttons to backend actions (join/leave call, open ticket) */}
-                <Button variant="outline" size="sm" className="flex-1">
-                  Join Call
-                </Button>
-                <Button variant="secondary" size="sm" className="flex-1">
-                  View Ticket
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
+                <div className="space-y-1 text-sm text-muted-foreground">
+                  <div>ID: {ticket.ticket_number || ticket.id}</div>
+                  <div>Status: {ticket.status}</div>
+                  <div>Customer: {ticket.customer_name || '—'}</div>
+                  <div>Category: {ticket.issue_category || 'General'}</div>
+                  <div>Call: {ticket.call_id ? 'Linked' : '—'}</div>
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => handleJoinCallForTicket(ticket)}
+                    disabled={!ticket.call_id}
+                  >
+                    Join Call
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => handleViewTicket(ticket.id)}
+                  >
+                    View Ticket
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Notifications Section */}

@@ -496,7 +496,7 @@ export const profileAPI = {
       throw new Error(data.error || 'Failed to fetch settings');
     }
 
-    return data.settings;
+    return data;
   },
 
   // PUT /api/users/{id}/settings - Update user settings using Edge Function
@@ -1812,4 +1812,42 @@ export const callAPI = {
       throw error;
     }
   },
+};
+
+// Settings API functions
+export const getUserSettings = async (): Promise<any> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('update-user-settings', {
+      method: 'GET',
+    });
+
+    if (error) {
+      console.error('Error fetching settings:', error);
+      throw new Error('Failed to fetch settings');
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('❌ Failed to get user settings:', error);
+    throw error;
+  }
+};
+
+export const updateUserSettings = async (settings: any): Promise<any> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('update-user-settings', {
+      method: 'PUT',
+      body: settings,
+    });
+
+    if (error) {
+      console.error('Error updating settings:', error);
+      throw new Error('Failed to update settings');
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('❌ Failed to update user settings:', error);
+    throw error;
+  }
 }; 

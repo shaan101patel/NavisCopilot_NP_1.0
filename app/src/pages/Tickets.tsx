@@ -48,7 +48,9 @@ import {
   Tag,
   Users,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Grid3X3,
+  List
 } from "lucide-react";
 
 type SortField = "created_at" | "updated_at" | "title" | "status" | "priority" | "assigned_to";
@@ -120,6 +122,7 @@ export default function Tickets() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("table");
   const [showNewTicketModal, setShowNewTicketModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -342,58 +345,69 @@ export default function Tickets() {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Tickets</h1>
-          <p className="text-gray-600">Manage customer support tickets</p>
-        </div>
-        <Button 
-          onClick={() => setShowNewTicketModal(true)}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Ticket
-        </Button>
-      </div>
-
-      {/* Error Alert */}
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
-              <span className="text-red-800">{error}</span>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleClearError}
-              className="text-red-600 hover:text-red-700"
+    <div className="p-4 md:p-6 min-h-screen w-full">
+      <div className="max-w-full mx-auto space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Tickets</h1>
+            <p className="text-gray-600">Manage customer support tickets</p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setViewMode(viewMode === "grid" ? "table" : "grid")}
+              className="order-2 sm:order-1"
             >
-              <X className="w-4 h-4" />
+              {viewMode === "grid" ? <List className="w-4 h-4" /> : <Grid3X3 className="w-4 h-4" />}
+            </Button>
+            <Button 
+              onClick={() => setShowNewTicketModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 order-1 sm:order-2"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Ticket
             </Button>
           </div>
         </div>
-      )}
 
-      {/* Search and Filters */}
-      <div className="mb-6 space-y-4">
-        <div className="flex gap-4">
-          <div className="flex-1">
+        {/* Error Alert */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
+                <span className="text-red-800">{error}</span>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleClearError}
+                className="text-red-600 hover:text-red-700"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Search and Filters */}
+        <div className="mb-6 space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 min-w-0">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 placeholder="Search tickets by title, description, customer name, or ticket number..."
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-10"
+                className="pl-10 w-full"
               />
             </div>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="shrink-0">
+              <Button variant="outline" className="shrink-0 w-full sm:w-auto">
                 <Filter className="w-4 h-4 mr-2" />
                 Filters
                 {(filters.status.length > 0 || filters.priority.length > 0 || filters.assigned_to.length > 0) && (
@@ -463,17 +477,17 @@ export default function Tickets() {
         </div>
       </div>
 
-      {/* Tickets Table */}
-      <Card>
+        {/* Tickets Table */}
+        <Card className="w-full">
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <h2 className="text-lg font-medium">All Tickets</h2>
             <div className="text-sm text-gray-500">
               Showing {tickets.length} of {pagination.total} tickets
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-6">{/* Remove padding on mobile for full-width table */}
           {loading ? (
             <div className="flex justify-center items-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -498,145 +512,200 @@ export default function Tickets() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4">
-                        <button
-                          onClick={() => handleSort("title")}
-                          className="flex items-center text-sm font-medium text-gray-700 hover:text-gray-900"
-                        >
-                          Ticket
-                          <ArrowUpDown className="w-4 h-4 ml-1" />
-                        </button>
-                      </th>
-                      <th className="text-left py-3 px-4">
-                        <button
-                          onClick={() => handleSort("status")}
-                          className="flex items-center text-sm font-medium text-gray-700 hover:text-gray-900"
-                        >
-                          Status
-                          <ArrowUpDown className="w-4 h-4 ml-1" />
-                        </button>
-                      </th>
-                      <th className="text-left py-3 px-4">
-                        <button
-                          onClick={() => handleSort("priority")}
-                          className="flex items-center text-sm font-medium text-gray-700 hover:text-gray-900"
-                        >
-                          Priority
-                          <ArrowUpDown className="w-4 h-4 ml-1" />
-                        </button>
-                      </th>
-                      <th className="text-left py-3 px-4">
-                        <button
-                          onClick={() => handleSort("assigned_to")}
-                          className="flex items-center text-sm font-medium text-gray-700 hover:text-gray-900"
-                        >
-                          Assigned To
-                          <ArrowUpDown className="w-4 h-4 ml-1" />
-                        </button>
-                      </th>
-                      <th className="text-left py-3 px-4">Customer</th>
-                      <th className="text-left py-3 px-4">
-                        <button
-                          onClick={() => handleSort("created_at")}
-                          className="flex items-center text-sm font-medium text-gray-700 hover:text-gray-900"
-                        >
-                          Created
-                          <ArrowUpDown className="w-4 h-4 ml-1" />
-                        </button>
-                      </th>
-                      <th className="text-left py-3 px-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAndSortedTickets.map((ticket) => {
-                      const StatusIcon = statusIcons[ticket.status];
-                      return (
-                        <tr key={ticket.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-3 px-4">
-                            <div>
-                              <div className="font-medium text-gray-900 cursor-pointer hover:text-blue-600"
-                                   onClick={() => openTicketDetails(ticket)}>
-                                {ticket.title}
+              {/* Desktop Table View */}
+              {viewMode === "table" && (
+                <div className="hidden lg:block overflow-x-auto w-full">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4">
+                          <button
+                            onClick={() => handleSort("title")}
+                            className="flex items-center text-sm font-medium text-gray-700 hover:text-gray-900"
+                          >
+                            Ticket
+                            <ArrowUpDown className="w-4 h-4 ml-1" />
+                          </button>
+                        </th>
+                        <th className="text-left py-3 px-4">
+                          <button
+                            onClick={() => handleSort("status")}
+                            className="flex items-center text-sm font-medium text-gray-700 hover:text-gray-900"
+                          >
+                            Status
+                            <ArrowUpDown className="w-4 h-4 ml-1" />
+                          </button>
+                        </th>
+                        <th className="text-left py-3 px-4">
+                          <button
+                            onClick={() => handleSort("priority")}
+                            className="flex items-center text-sm font-medium text-gray-700 hover:text-gray-900"
+                          >
+                            Priority
+                            <ArrowUpDown className="w-4 h-4 ml-1" />
+                          </button>
+                        </th>
+                        <th className="text-left py-3 px-4">
+                          <button
+                            onClick={() => handleSort("assigned_to")}
+                            className="flex items-center text-sm font-medium text-gray-700 hover:text-gray-900"
+                          >
+                            Assigned To
+                            <ArrowUpDown className="w-4 h-4 ml-1" />
+                          </button>
+                        </th>
+                        <th className="text-left py-3 px-4">Customer</th>
+                        <th className="text-left py-3 px-4">
+                          <button
+                            onClick={() => handleSort("created_at")}
+                            className="flex items-center text-sm font-medium text-gray-700 hover:text-gray-900"
+                          >
+                            Created
+                            <ArrowUpDown className="w-4 h-4 ml-1" />
+                          </button>
+                        </th>
+                        <th className="text-left py-3 px-4">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAndSortedTickets.map((ticket) => {
+                        const StatusIcon = statusIcons[ticket.status];
+                        return (
+                          <tr key={ticket.id} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-3 px-4">
+                              <div>
+                                <div className="font-medium text-gray-900 cursor-pointer hover:text-blue-600"
+                                     onClick={() => openTicketDetails(ticket)}>
+                                  {ticket.title}
+                                </div>
+                                <div className="text-sm text-gray-500">#{ticket.ticket_number}</div>
+                                {ticket.tags && ticket.tags.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {ticket.tags.slice(0, 2).map((tag, index) => (
+                                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+                                        <Tag className="w-3 h-3 mr-1" />
+                                        {tag}
+                                      </span>
+                                    ))}
+                                    {ticket.tags.length > 2 && (
+                                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+                                        +{ticket.tags.length - 2} more
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
                               </div>
-                              <div className="text-sm text-gray-500">#{ticket.ticket_number}</div>
-                              {ticket.tags && ticket.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {ticket.tags.slice(0, 2).map((tag, index) => (
-                                    <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
-                                      <Tag className="w-3 h-3 mr-1" />
-                                      {tag}
-                                    </span>
-                                  ))}
-                                  {ticket.tags.length > 2 && (
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
-                                      +{ticket.tags.length - 2} more
-                                    </span>
-                                  )}
-                                </div>
-                              )}
+                            </td>
+                            <td className="py-3 px-4">
+                              <Badge className={`${statusColors[ticket.status]} flex items-center w-fit`}>
+                                <StatusIcon className="w-3 h-3 mr-1" />
+                                {ticket.status}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4">
+                              <Badge className={priorityColors[ticket.priority]}>
+                                {ticket.priority}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center">
+                                <User className="w-4 h-4 mr-2 text-gray-400" />
+                                <span className="text-sm text-gray-700">
+                                  {getAgentName(ticket.assigned_to)}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div>
+                                <div className="text-sm text-gray-900">{ticket.customer_name || 'N/A'}</div>
+                                {ticket.customer_email && (
+                                  <div className="text-sm text-gray-500">{ticket.customer_email}</div>
+                                )}
+                                {ticket.call_id && (
+                                  <div className="flex items-center text-xs text-blue-600 mt-1">
+                                    <Phone className="w-3 h-3 mr-1" />
+                                    From Call
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center text-sm text-gray-500">
+                                <Calendar className="w-4 h-4 mr-1" />
+                                {new Date(ticket.created_at).toLocaleDateString()}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  <DropdownMenuItem onClick={() => openTicketDetails(ticket)}>
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    View Details
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => openEditModal(ticket)}>
+                                    <Edit3 className="w-4 h-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => setShowDeleteConfirm(ticket.id)}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Mobile/Tablet Card View */}
+              {viewMode === "grid" && (
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {filteredAndSortedTickets.map((ticket) => {
+                    const StatusIcon = statusIcons[ticket.status];
+                    return (
+                      <div
+                        key={ticket.id}
+                        className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => openTicketDetails(ticket)}
+                      >
+                        <div className="space-y-3">
+                          {/* Header */}
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-medium text-gray-900 truncate" title={ticket.title}>
+                                {ticket.title}
+                              </h3>
+                              <p className="text-sm text-gray-500">#{ticket.ticket_number}</p>
                             </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <Badge className={`${statusColors[ticket.status]} flex items-center w-fit`}>
-                              <StatusIcon className="w-3 h-3 mr-1" />
-                              {ticket.status}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4">
-                            <Badge className={priorityColors[ticket.priority]}>
-                              {ticket.priority}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center">
-                              <User className="w-4 h-4 mr-2 text-gray-400" />
-                              <span className="text-sm text-gray-700">
-                                {getAgentName(ticket.assigned_to)}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div>
-                              <div className="text-sm text-gray-900">{ticket.customer_name || 'N/A'}</div>
-                              {ticket.customer_email && (
-                                <div className="text-sm text-gray-500">{ticket.customer_email}</div>
-                              )}
-                              {ticket.call_id && (
-                                <div className="flex items-center text-xs text-blue-600 mt-1">
-                                  <Phone className="w-3 h-3 mr-1" />
-                                  From Call
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center text-sm text-gray-500">
-                              <Calendar className="w-4 h-4 mr-1" />
-                              {new Date(ticket.created_at).toLocaleDateString()}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
                             <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
+                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                                   <MoreHorizontal className="w-4 h-4" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent>
-                                <DropdownMenuItem onClick={() => openTicketDetails(ticket)}>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openTicketDetails(ticket); }}>
                                   <Eye className="w-4 h-4 mr-2" />
                                   View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openEditModal(ticket)}>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditModal(ticket); }}>
                                   <Edit3 className="w-4 h-4 mr-2" />
                                   Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
-                                  onClick={() => setShowDeleteConfirm(ticket.id)}
+                                  onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(ticket.id); }}
                                   className="text-red-600"
                                 >
                                   <Trash2 className="w-4 h-4 mr-2" />
@@ -644,17 +713,78 @@ export default function Tickets() {
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                          </div>
+
+                          {/* Status and Priority */}
+                          <div className="flex items-center gap-2">
+                            <Badge className={`${statusColors[ticket.status]} flex items-center text-xs`}>
+                              <StatusIcon className="w-3 h-3 mr-1" />
+                              {ticket.status}
+                            </Badge>
+                            <Badge className={`${priorityColors[ticket.priority]} text-xs`}>
+                              {ticket.priority}
+                            </Badge>
+                          </div>
+
+                          {/* Customer Info */}
+                          <div className="space-y-1">
+                            <div className="flex items-center text-sm text-gray-700">
+                              <User className="w-4 h-4 mr-2 text-gray-400" />
+                              <span className="truncate">{ticket.customer_name || 'N/A'}</span>
+                            </div>
+                            {ticket.customer_email && (
+                              <div className="text-xs text-gray-500 ml-6 truncate">
+                                {ticket.customer_email}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Assignment and Date */}
+                          <div className="space-y-1 text-xs text-gray-500">
+                            <div className="flex items-center">
+                              <Users className="w-3 h-3 mr-2" />
+                              <span className="truncate">{getAgentName(ticket.assigned_to)}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <Calendar className="w-3 h-3 mr-2" />
+                              <span>{new Date(ticket.created_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+
+                          {/* Tags */}
+                          {ticket.tags && ticket.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {ticket.tags.slice(0, 3).map((tag, index) => (
+                                <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+                                  <Tag className="w-3 h-3 mr-1" />
+                                  {tag}
+                                </span>
+                              ))}
+                              {ticket.tags.length > 3 && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+                                  +{ticket.tags.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Call indicator */}
+                          {ticket.call_id && (
+                            <div className="flex items-center text-xs text-blue-600">
+                              <Phone className="w-3 h-3 mr-1" />
+                              From Call
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Pagination */}
               {pagination.totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row items-center justify-between mt-4 pt-4 border-t border-gray-200 gap-4 px-4 sm:px-0">
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-gray-700">Show</span>
                     <select 
@@ -670,8 +800,8 @@ export default function Tickets() {
                     <span className="text-sm text-gray-700">per page</span>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-700">
+                  <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                    <span className="text-xs sm:text-sm text-gray-700 text-center">
                       Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
                     </span>
                     <div className="flex space-x-1">
@@ -702,23 +832,24 @@ export default function Tickets() {
 
       {/* New Ticket Modal */}
       {showNewTicketModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-            <CardHeader className="border-b border-border">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+            <CardHeader className="border-b border-border p-4 sm:p-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Create New Ticket</h2>
+                <h2 className="text-lg sm:text-xl font-semibold">Create New Ticket</h2>
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={() => setShowNewTicketModal(false)}
                   disabled={loading}
+                  className="h-8 w-8 p-0"
                 >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
             </CardHeader>
             
-            <CardContent className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+            <CardContent className="p-4 sm:p-6 overflow-y-auto max-h-[calc(95vh-140px)] sm:max-h-[calc(90vh-140px)]">
               <div className="space-y-4">
                 {/* Customer Information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -838,19 +969,20 @@ export default function Tickets() {
               </div>
             </CardContent>
 
-            <div className="border-t border-border p-6">
-              <div className="flex justify-end gap-3">
+            <div className="border-t border-border p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-end gap-3">
                 <Button 
                   variant="outline" 
                   onClick={() => setShowNewTicketModal(false)}
                   disabled={loading}
+                  className="order-2 sm:order-1"
                 >
                   Cancel
                 </Button>
                 <Button 
                   onClick={handleCreateTicket}
                   disabled={loading || !newTicketForm.title.trim() || !newTicketForm.description.trim()}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 order-1 sm:order-2"
                 >
                   {loading ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -867,13 +999,13 @@ export default function Tickets() {
 
       {/* Edit Ticket Modal */}
       {showEditModal && selectedTicket && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-            <CardHeader className="border-b border-border">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+            <CardHeader className="border-b border-border p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold">Edit Ticket</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <h2 className="text-lg sm:text-xl font-semibold">Edit Ticket</h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                     Ticket ID: {selectedTicket.id}
                   </p>
                 </div>
@@ -882,13 +1014,14 @@ export default function Tickets() {
                   size="sm" 
                   onClick={() => setShowEditModal(false)}
                   disabled={loading}
+                  className="h-8 w-8 p-0"
                 >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
             </CardHeader>
             
-            <CardContent className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+            <CardContent className="p-4 sm:p-6 overflow-y-auto max-h-[calc(95vh-140px)] sm:max-h-[calc(90vh-140px)]">
               <div className="space-y-4">
                 {/* Customer Information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1042,19 +1175,20 @@ export default function Tickets() {
               </div>
             </CardContent>
 
-            <div className="border-t border-border p-6">
-              <div className="flex justify-end gap-3">
+            <div className="border-t border-border p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-end gap-3">
                 <Button 
                   variant="outline" 
                   onClick={() => setShowEditModal(false)}
                   disabled={loading}
+                  className="order-2 sm:order-1"
                 >
                   Cancel
                 </Button>
                 <Button 
                   onClick={handleUpdateTicket}
                   disabled={loading || !editTicketForm.title.trim() || !editTicketForm.description.trim()}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 order-1 sm:order-2"
                 >
                   {loading ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1071,9 +1205,9 @@ export default function Tickets() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
           <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-md">
-            <CardHeader className="border-b border-border">
+            <CardHeader className="border-b border-border p-4 sm:p-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-full">
                   <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
@@ -1087,19 +1221,20 @@ export default function Tickets() {
               </div>
             </CardHeader>
             
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <p className="text-sm">
                 Are you sure you want to delete ticket <strong>{showDeleteConfirm}</strong>? 
                 This will permanently remove the ticket and all associated data.
               </p>
             </CardContent>
 
-            <div className="border-t border-border p-6">
-              <div className="flex justify-end gap-3">
+            <div className="border-t border-border p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-end gap-3">
                 <Button 
                   variant="outline" 
                   onClick={() => setShowDeleteConfirm(null)}
                   disabled={loading}
+                  className="order-2 sm:order-1"
                 >
                   Cancel
                 </Button>
@@ -1107,7 +1242,7 @@ export default function Tickets() {
                   variant="outline"
                   onClick={() => handleDeleteTicket(showDeleteConfirm)}
                   disabled={loading}
-                  className="text-red-600 hover:text-red-700 hover:border-red-300 flex items-center gap-2"
+                  className="text-red-600 hover:text-red-700 hover:border-red-300 flex items-center gap-2 order-1 sm:order-2"
                 >
                   {loading ? (
                     <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
@@ -1133,6 +1268,7 @@ export default function Tickets() {
           }}
         />
       )}
+      </div>
     </div>
   );
 }
