@@ -1,0 +1,41 @@
+# ==========================================
+# SUPABASE DEPLOYMENT COMMANDS
+# Run these commands in your PowerShell terminal
+# ==========================================
+
+# 1. Navigate to your project directory
+cd "C:\Users\shaan\Documents\.AIS_Startup\Navis\MVP1.0\NavisCopilot_FrontEnd_PR_1.0"
+
+# 2. Initialize Supabase if not already done (skip if already initialized)
+# npx supabase init
+
+# 3. Link to your Supabase project (replace with your project reference)
+# npx supabase link --project-ref fjdurojwqtqoydmqjvmk
+
+# 4. Deploy the edge function
+npx supabase functions deploy retrieve-similar-chunks
+
+# 5. Set your OpenAI API key (required for embeddings)
+# Replace YOUR_OPENAI_API_KEY with your actual key
+npx supabase secrets set OPENAI_API_KEY=YOUR_OPENAI_API_KEY
+
+# 6. Verify the function is deployed
+npx supabase functions list
+
+# 7. Test the function locally (optional)
+# npx supabase functions serve retrieve-similar-chunks
+
+# ==========================================
+# TROUBLESHOOTING COMMANDS
+# ==========================================
+
+# Check function logs
+npx supabase functions logs retrieve-similar-chunks
+
+# Check edge function status
+npx supabase functions list
+
+# Redeploy if needed
+npx supabase functions deploy retrieve-similar-chunks --no-verify-jwt
+
+# ==========================================
