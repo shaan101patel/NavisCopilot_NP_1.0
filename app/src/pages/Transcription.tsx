@@ -35,7 +35,7 @@ const Transcription: React.FC = () => {
     apiKey, language: DEFAULT_LANGUAGE, task: 'transcribe', enableTimestamps: true, model: 'whisper-large-v3-turbo', timestampGranularities: ['segment', 'word'], sourceId: 'share', appendMode: false,
   });
 
-  // Per-source in-flight queues and accumulators
+  // Per-source in-flight queues and accumulatorsa
   const inFlightRefMic = useRef(false);
   const pendingRefMic = useRef(false);
   const accumulatedChunksRefMic = useRef<Blob[]>([]);
