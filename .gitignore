@@ -93,3 +93,29 @@ generated/
 
 # Storybook build outputs
 /storybook-static
+.cursor/mcp.json
+.cursor/mcp.json
+.cursor/mcp.json
+.cursor/mcp.json
+ProtoypeCodeBase/Prototyoe-src/App.tsx
+ProtoypeCodeBase/Prototyoe-src/index.css
+ProtoypeCodeBase/Prototyoe-src/main.tsx
+ProtoypeCodeBase/Prototyoe-src/vite-env.d.ts
+ProtoypeCodeBase/Prototyoe-src/components/AudioCapture/AudioControls.tsx
+ProtoypeCodeBase/Prototyoe-src/components/AudioCapture/RecordingStatus.tsx
+ProtoypeCodeBase/Prototyoe-src/components/Layout/Header.tsx
+ProtoypeCodeBase/Prototyoe-src/components/Layout/PrototypeLayout.tsx
+ProtoypeCodeBase/Prototyoe-src/components/Transcript/ChatThread.tsx
+ProtoypeCodeBase/Prototyoe-src/components/Transcript/ConfidenceIndicator.tsx
+ProtoypeCodeBase/Prototyoe-src/components/Transcript/MessageBubble.tsx
+ProtoypeCodeBase/Prototyoe-src/components/Transcript/TranscriptDisplay.tsx
+ProtoypeCodeBase/Prototyoe-src/components/Transcript/TranscriptSegment.tsx
+ProtoypeCodeBase/Prototyoe-src/hooks/useAudioCapture.ts
+ProtoypeCodeBase/Prototyoe-src/hooks/useDisplayAudioCapture.ts
+ProtoypeCodeBase/Prototyoe-src/hooks/useTranscription.ts
+ProtoypeCodeBase/Prototyoe-src/services/audioCapture.ts
+ProtoypeCodeBase/Prototyoe-src/services/groqSTT.ts
+ProtoypeCodeBase/Prototyoe-src/types/audio.ts
+ProtoypeCodeBase/Prototyoe-src/types/transcript.ts
+ProtoypeCodeBase/Prototyoe-src/utils/audioFormat.ts
+ProtoypeCodeBase/Prototyoe-src/utils/constants.ts
