@@ -66,3 +66,14 @@ You don’t have to ever use `eject`. The curated feature set is suitable for sm
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
 To learn React, check out the [React documentation](https://reactjs.org/).
+
+## New Features
+
+### Real-time Transcription
+
+A new page has been added at `/transcription` to provide real-time speech-to-text transcription from both the user's microphone and screen/tab share audio.
+
+- **Microphone Transcription**: Captures audio from the user's default microphone.
+- **Screen Share Transcription**: Captures audio from a shared browser tab or window.
+- **Live Updates**: The transcript is updated in real-time as audio is processed.
+- **API Configuration**: Requires a Groq API key, which can be set via the `REACT_APP_GROQ_API_KEY` environment variable or entered manually on the page.

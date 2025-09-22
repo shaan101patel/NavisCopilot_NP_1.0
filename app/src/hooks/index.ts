@@ -1,4 +1,4 @@
-// Export all custom hooks from this directory
+// Export selected custom hooks from this directory
 export { useTheme } from './useTheme';
 export { useAgent } from './livecall/useAgent';
 

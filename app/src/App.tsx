@@ -22,6 +22,7 @@ import Admin from "@/pages/Admin";
 import Today from "@/pages/Today";
 import Notifications from "@/pages/Notifications";
 import InboundNumbers from "@/pages/InboundNumbers";
+import Transcription from "@/pages/Transcription";
 
 function App() {
   return (
@@ -82,6 +83,16 @@ function App() {
                   <ProtectedRoute>
                     <MainLayout>
                       <Analytics />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/transcription"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <Transcription />
                     </MainLayout>
                   </ProtectedRoute>
                 }
