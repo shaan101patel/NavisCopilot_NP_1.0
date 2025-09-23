@@ -4,6 +4,7 @@ import { useDisplayAudioCapture } from '@/hooks/useDisplayAudioCapture';
 import { useTranscription } from '@/hooks/useTranscription';
 import { AudioControls } from '@/components/transcription/AudioControls';
 import { TranscriptDisplay } from '@/components/transcription/TranscriptDisplay';
+import { TranscriptSegment } from '@/types/transcript';
 import type { AudioChunk } from '../types/audio';
 
 // Uses Groq API key from environment variable if present. For CRA, prefix REACT_APP_
@@ -34,6 +35,16 @@ const Transcription: React.FC = () => {
   const { segments: shareSegments, isProcessing: isShareProcessing, wordCount: shareWordCount, averageConfidence: shareAvgConf, processAudio: processShareAudio, clearTranscript: clearShareTranscript } = useTranscription({
     apiKey, language: DEFAULT_LANGUAGE, task: 'transcribe', enableTimestamps: true, model: 'whisper-large-v3-turbo', timestampGranularities: ['segment', 'word'], sourceId: 'share', appendMode: false,
   });
+
+  // Build a single combined, time-sorted transcript feed
+  const combinedSegments: TranscriptSegment[] = [...micSegments, ...shareSegments]
+    .sort((a, b) => a.timestamp - b.timestamp);
+  const combinedIsProcessing = isMicProcessing || isShareProcessing;
+  const combinedWordCount = micWordCount + shareWordCount;
+  const combinedAvgConfidence = (micWordCount + shareWordCount) > 0
+    ? ((micAvgConf * micWordCount) + (shareAvgConf * shareWordCount)) / (micWordCount + shareWordCount)
+    : 0;
+  const clearAll = () => { clearMicTranscript(); clearShareTranscript(); };
 
   // Per-source in-flight queues and accumulatorsa
   const inFlightRefMic = useRef(false);
@@ -174,12 +185,14 @@ const Transcription: React.FC = () => {
 
         <div className="space-y-4">
           <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-1">Mic Transcript</h3>
-            <TranscriptDisplay segments={micSegments} isProcessing={isMicProcessing} wordCount={micWordCount} averageConfidence={micAvgConf} onClearTranscript={clearMicTranscript} />
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-1">Share Transcript</h3>
-            <TranscriptDisplay segments={shareSegments} isProcessing={isShareProcessing} wordCount={shareWordCount} averageConfidence={shareAvgConf} onClearTranscript={clearShareTranscript} />
+            <h3 className="text-sm font-medium text-gray-700 mb-1">Conversation Transcript</h3>
+            <TranscriptDisplay
+              segments={combinedSegments}
+              isProcessing={combinedIsProcessing}
+              wordCount={combinedWordCount}
+              averageConfidence={combinedAvgConfidence}
+              onClearTranscript={clearAll}
+            />
           </div>
         </div>
       </div>

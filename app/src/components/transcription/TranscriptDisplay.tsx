@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { TranscriptSegment } from '../../types/transcript';
 import { TranscriptSegmentComponent } from './TranscriptSegment';
 
@@ -18,6 +18,9 @@ export const TranscriptDisplay: React.FC<{
     setTimeout(() => setCopiedSegmentId(null), 2000);
   };
   const avgColor = averageConfidence >= 0.8 ? 'text-green-600' : averageConfidence >= 0.6 ? 'text-yellow-600' : 'text-red-600';
+
+  // When segments contain sourceId, render a chat-style two-sided layout
+  const hasSources = useMemo(() => segments.some(s => s.sourceId), [segments]);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border">
@@ -60,9 +63,35 @@ export const TranscriptDisplay: React.FC<{
           </div>
         ) : (
           <div className="space-y-3 max-h-96 overflow-y-auto">
-            {segments.map((segment) => (
-              <TranscriptSegmentComponent key={segment.id} segment={segment} onCopy={() => handleCopySegment(segment.id)} />
-            ))}
+            {!hasSources && (
+              // Fallback to default segment renderer when no sourceId is present
+              <>
+                {segments.map((segment) => (
+                  <TranscriptSegmentComponent key={segment.id} segment={segment} onCopy={() => handleCopySegment(segment.id)} />
+                ))}
+              </>
+            )}
+
+            {hasSources && (
+              <>
+                {segments.map(segment => {
+                  const isMic = segment.sourceId === 'mic';
+                  const rowJustify = isMic ? 'justify-end' : 'justify-start';
+                  const bubbleColor = isMic ? 'bg-blue-50 border-blue-200 text-blue-800' : 'bg-gray-50 border-gray-200 text-gray-800';
+                  const bubbleAlign = isMic ? 'text-right' : 'text-left';
+                  return (
+                    <div key={segment.id} className={`flex ${rowJustify}`}>
+                      <div className={`max-w-[80%] border rounded-xl px-4 py-3 ${bubbleColor}`}>
+                        <div className={`text-xs opacity-70 ${bubbleAlign} mb-1`}>{new Date(segment.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                        <div className={`whitespace-pre-wrap leading-relaxed ${bubbleAlign}`}>
+                          {segment.text}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
           </div>
         )}
         {isProcessing && segments.length === 0 && (
