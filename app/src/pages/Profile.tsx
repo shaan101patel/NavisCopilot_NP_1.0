@@ -149,10 +149,6 @@ export default function Profile() {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
-          <Button variant="outline" className="flex items-center gap-2" onClick={handleEditProfile}>
-            <EditIcon />
-            Edit Profile
-          </Button>
         </div>
 
         <div className="grid gap-6 md:grid-cols-3">
@@ -233,28 +229,7 @@ export default function Profile() {
               </div>
             </Card>
 
-            {/* Activity Stats */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Activity Overview</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <p className="text-2xl font-bold text-blue-600">24</p>
-                  <p className="text-sm text-gray-600">Calls Today</p>
-                </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <p className="text-2xl font-bold text-green-600">156</p>
-                  <p className="text-sm text-gray-600">Total Tickets</p>
-                </div>
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <p className="text-2xl font-bold text-purple-600">92%</p>
-                  <p className="text-sm text-gray-600">Success Rate</p>
-                </div>
-                <div className="text-center p-4 bg-orange-50 rounded-lg">
-                  <p className="text-2xl font-bold text-orange-600">4.8</p>
-                  <p className="text-sm text-gray-600">Avg Rating</p>
-                </div>
-              </div>
-            </Card>
+            {/* Activity Overview removed */}
           </div>
         </div>
 
