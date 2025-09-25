@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Provider } from 'react-redux';
 import { store } from './store/store';
@@ -24,8 +25,26 @@ import Notifications from "@/pages/Notifications";
 import InboundNumbers from "@/pages/InboundNumbers";
 import Transcription from "@/pages/Transcription";
 import { ApiKeyProvider } from "@/contexts/ApiKeyContext";
+import NavisBrowserLogo from "@/assets/Navis_BrowserLogo.png";
 
 function App() {
+  useEffect(() => {
+    document.title = "Navis Copilot";
+
+    const faviconUrl = NavisBrowserLogo;
+    if (!faviconUrl) return;
+
+    const existingLink = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+    const link = existingLink ?? document.createElement("link");
+    link.rel = "icon";
+    link.type = "image/png";
+    link.href = faviconUrl;
+
+    if (!existingLink) {
+      document.head.appendChild(link);
+    }
+  }, []);
+
   return (
     <Provider store={store}>
       <AuthProvider>
