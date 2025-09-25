@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAudioCapture } from '@/hooks/useAudioCapture';
 import { useDisplayAudioCapture } from '@/hooks/useDisplayAudioCapture';
 import { useTranscription } from '@/hooks/useTranscription';
@@ -6,26 +6,43 @@ import { AudioControls } from '@/components/transcription/AudioControls';
 import { TranscriptDisplay } from '@/components/transcription/TranscriptDisplay';
 import { TranscriptSegment } from '@/types/transcript';
 import type { AudioChunk } from '../types/audio';
+import { useApiKey } from '@/contexts/ApiKeyContext';
 
 // Uses Groq API key from environment variable if present. For CRA, prefix REACT_APP_
 const DEFAULT_API_KEY = (process.env.REACT_APP_GROQ_API_KEY as string) || '';
 const DEFAULT_LANGUAGE = (process.env.REACT_APP_DEFAULT_LANGUAGE as string) || 'en';
 
 const Transcription: React.FC = () => {
+  const { getRaw, save: saveApiKey } = useApiKey();
   const [apiKey, setApiKey] = useState<string>(DEFAULT_API_KEY);
   const [isConfigured, setIsConfigured] = useState<boolean>(!!DEFAULT_API_KEY);
-
   // Mic capture
   const {
     isRecording, isPaused, audioLevel, totalDuration, error: audioError,
     initialize, startRecording, stopRecording, pauseRecording, resumeRecording, clearError,
   } = useAudioCapture();
 
+  useEffect(() => {
+    (async () => {
+      const raw = await getRaw();
+      if (raw && raw.length > 0) {
+        setApiKey(raw);
+        setIsConfigured(true);
+      }
+    })();
+  }, [getRaw]);
+
   // Display/tab audio capture
   const {
-    isRecording: isShareRecording, isPaused: isSharePaused, totalDuration: shareDuration, error: shareError,
-    initialize: initializeShare, startRecording: startShareRecording, stopRecording: stopShareRecording,
-    pauseRecording: pauseShareRecording, resumeRecording: resumeShareRecording,
+    isRecording: isShareRecording,
+    isPaused: isSharePaused,
+    totalDuration: shareDuration,
+    error: shareError,
+    initialize: initializeShare,
+    startRecording: startShareRecording,
+    stopRecording: stopShareRecording,
+    pauseRecording: pauseShareRecording,
+    resumeRecording: resumeShareRecording,
   } = useDisplayAudioCapture();
 
   // Transcription hook (Groq STT)
@@ -121,10 +138,14 @@ const Transcription: React.FC = () => {
     } catch (e) { console.error('Failed to stop share recording:', e); }
   }, [stopShareRecording, submitAggregatedShare]);
 
-  const handleConfigureAPI = useCallback(() => {
+  const handleConfigureAPI = useCallback(async () => {
     const key = prompt('Enter your Groq API key:');
-    if (key) { setApiKey(key); setIsConfigured(true); }
-  }, []);
+    if (key) {
+      setApiKey(key);
+      setIsConfigured(true);
+      try { await saveApiKey(key); } catch {}
+    }
+  }, [saveApiKey]);
 
   return (
     <div className="p-4">

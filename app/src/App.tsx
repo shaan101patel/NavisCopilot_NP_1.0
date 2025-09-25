@@ -23,12 +23,14 @@ import Today from "@/pages/Today";
 import Notifications from "@/pages/Notifications";
 import InboundNumbers from "@/pages/InboundNumbers";
 import Transcription from "@/pages/Transcription";
+import { ApiKeyProvider } from "@/contexts/ApiKeyContext";
 
 function App() {
   return (
     <Provider store={store}>
       <AuthProvider>
         <AgentProvider>
+          <ApiKeyProvider>
           <Router>
             <Routes>
               {/* Public Routes */}
@@ -201,6 +203,7 @@ function App() {
               />
             </Routes>
           </Router>
+          </ApiKeyProvider>
         </AgentProvider>
       </AuthProvider>
     </Provider>

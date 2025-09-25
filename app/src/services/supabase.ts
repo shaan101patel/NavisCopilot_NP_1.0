@@ -631,6 +631,66 @@ export const profileAPI = {
 
 export default supabase;
 
+// ===== API KEY MANAGEMENT (Edge Function: manage-api-key) =====
+
+export interface ApiKeyStatus { apiKeyMasked: string }
+
+export const apiKeyAPI = {
+  async get(): Promise<ApiKeyStatus> {
+    const { data, error } = await supabase.functions.invoke('manage-api-key', {
+      method: 'GET',
+    });
+    if (error) {
+      console.error('Error fetching API key status:', error);
+      throw new Error(error.message || 'Failed to fetch API key');
+    }
+    return data as ApiKeyStatus;
+  },
+  async getRaw(): Promise<{ apiKey?: string; apiKeyMasked: string }> {
+    const { data, error } = await supabase.functions.invoke('manage-api-key', {
+      method: 'POST',
+      body: { action: 'get_raw' },
+    });
+    if (error) {
+      console.error('Error fetching raw API key:', error);
+      throw new Error(error.message || 'Failed to fetch API key');
+    }
+    return data as { apiKey?: string; apiKeyMasked: string };
+  },
+  async set(apiKey: string): Promise<{ success: boolean }> {
+    const { data, error } = await supabase.functions.invoke('manage-api-key', {
+      method: 'POST',
+      body: { apiKey },
+    });
+    if (error) {
+      console.error('Error saving API key:', error);
+      throw new Error(error.message || 'Failed to save API key');
+    }
+    return data as { success: boolean };
+  },
+  async remove(): Promise<{ success: boolean }> {
+    const { data, error } = await supabase.functions.invoke('manage-api-key', {
+      method: 'DELETE',
+    });
+    if (error) {
+      console.error('Error deleting API key:', error);
+      throw new Error(error.message || 'Failed to delete API key');
+    }
+    return data as { success: boolean };
+  },
+  async validate(apiKey: string): Promise<{ valid: boolean; error?: string }> {
+    const { data, error } = await supabase.functions.invoke('manage-api-key', {
+      method: 'POST',
+      body: { action: 'validate', apiKey },
+    });
+    if (error) {
+      console.error('Error validating API key:', error);
+      throw new Error(error.message || 'Validation failed');
+    }
+    return data as { valid: boolean; error?: string };
+  },
+};
+
 // Call Session Management API functions
 export const callAPI = {
   /**
