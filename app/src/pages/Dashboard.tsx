@@ -201,7 +201,7 @@ export default function Dashboard() {
                 <Input
                   id="api-key"
                   type={showApiKey ? 'text' : 'password'}
-                  placeholder="sk-..."
+                  placeholder="gsk_..."
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   aria-describedby="api-key-help"

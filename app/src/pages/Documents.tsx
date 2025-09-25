@@ -11,7 +11,6 @@ import {
   Search, 
   Filter,
   Download,
-  Eye,
   Calendar,
   User,
   Paperclip,
@@ -642,54 +641,7 @@ export default function Documents() {
     }
   }, [getAccessToken(), API_FUNCTIONS_URL]);
 
-  // Download document
-  const downloadDocument = useCallback(async (documentId: string) => {
-    if (!getAccessToken()) return;
-
-    try {
-      const response = await fetch(`${API_FUNCTIONS_URL}/download-document/${documentId}`, {
-        headers: {
-          'Authorization': `Bearer ${getAccessToken()}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Download failed');
-      }
-
-      // Handle different response types
-      const contentType = response.headers.get('content-type');
-      
-      if (contentType?.includes('application/json')) {
-        // If we get JSON, it might be an error or redirect
-        const data = await response.json();
-        if (data.error) {
-          throw new Error(data.error);
-        }
-      } else {
-        // Handle file download
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const contentDisposition = response.headers.get('Content-Disposition');
-        const fileName = contentDisposition 
-          ? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
-          : `download-${documentId}`;
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName || 'download';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        toast.success('Download started');
-      }
-    } catch (error) {
-      console.error('Download error:', error);
-      toast.error('Failed to download document');
-    }
-  }, [getAccessToken(), API_FUNCTIONS_URL]);
+  // Removed direct download helper as download buttons are removed
 
   // Delete document
   const deleteDocument = useCallback(async (documentId: string) => {
@@ -854,43 +806,7 @@ export default function Documents() {
     handleFileUpload(e.target.files);
   }, [handleFileUpload]);
 
-  // Handle document view
-  const handleViewDocument = useCallback(async (document: Document) => {
-    if (!getAccessToken()) return;
-
-    try {
-      // For documents already having a signed URL, open directly
-      if (document.url) {
-        window.open(document.url, '_blank');
-        return;
-      }
-
-      // Otherwise fetch document details to get signed URL
-      const response = await fetch(`${API_FUNCTIONS_URL}/get-document/${document.id}`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get document details');
-      }
-
-      const data = await response.json();
-      
-      if (data.success && data.document.url) {
-        window.open(data.document.url, '_blank');
-      } else {
-        throw new Error('Document URL not available');
-      }
-    } catch (error) {
-      console.error('View document error:', error);
-      toast.error('Failed to open document');
-    }
-  }, [getAccessToken(), API_FUNCTIONS_URL, getAuthHeaders]);
-
-  // Handle document download
-  const handleDownloadDocument = useCallback((document: Document) => {
-    downloadDocument(document.id);
-  }, [downloadDocument]);
+  // Removed view/download handlers as action buttons are removed
 
   // Handle document deletion with confirmation
   const handleDeleteDocument = useCallback(async (document: Document) => {
@@ -1110,7 +1026,7 @@ export default function Documents() {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-medium text-foreground">
             {activeTab === "documents" 
-              ? `Documents (${pagination.total})`
+              ? `Documents`
               : `Tickets with Documents (${filteredTicketDocuments.length})`
             }
           </h2>
@@ -1201,34 +1117,17 @@ export default function Documents() {
                             </div>
                           )}
                         </div>
-                        <div className="flex justify-between items-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewDocument(document)}
-                          >
-                            <Eye className="w-3 h-3 mr-1" />
-                            View
-                          </Button>
-                          <div className="flex items-center space-x-1">
+                        <div className="flex justify-end items-center">
+                          {document.uploadedBy === user?.id && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDownloadDocument(document)}
+                              onClick={() => handleDeleteDocument(document)}
+                              className="text-red-500 hover:text-red-700"
                             >
-                              <Download className="w-3 h-3" />
+                              <Trash2 className="w-3 h-3" />
                             </Button>
-                            {document.uploadedBy === user?.id && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteDocument(document)}
-                                className="text-red-500 hover:text-red-700"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -1246,21 +1145,6 @@ export default function Documents() {
                           <span>{formatDate(new Date(document.uploadDate))}</span>
                           <span>{formatFileSize(document.fileSize)}</span>
                           <div className="flex items-center space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewDocument(document)}
-                            >
-                              <Eye className="w-3 h-3 mr-1" />
-                              View
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDownloadDocument(document)}
-                            >
-                              <Download className="w-3 h-3" />
-                            </Button>
                             {document.uploadedBy === user?.id && (
                               <Button
                                 variant="ghost"
@@ -1420,25 +1304,7 @@ export default function Documents() {
                               </div>
                               <div className="flex items-center justify-between text-xs text-muted-foreground">
                                 <span>{formatFileSize(document.fileSize)}</span>
-                                <div className="flex items-center space-x-1">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleViewDocument(document)}
-                                    className="h-6 px-2 text-xs"
-                                  >
-                                    <Eye className="w-3 h-3 mr-1" />
-                                    View
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDownloadDocument(document)}
-                                    className="h-6 px-2 text-xs"
-                                  >
-                                    <Download className="w-3 h-3" />
-                                  </Button>
-                                </div>
+                                {/* View/Download buttons removed */}
                               </div>
                             </div>
                           ) : (
@@ -1452,25 +1318,7 @@ export default function Documents() {
                               </div>
                               <div className="flex items-center space-x-3 text-xs text-muted-foreground">
                                 <span>{formatFileSize(document.fileSize)}</span>
-                                <div className="flex items-center space-x-1">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleViewDocument(document)}
-                                    className="h-6 px-2 text-xs"
-                                  >
-                                    <Eye className="w-3 h-3 mr-1" />
-                                    View
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDownloadDocument(document)}
-                                    className="h-6 px-2 text-xs"
-                                  >
-                                    <Download className="w-3 h-3" />
-                                  </Button>
-                                </div>
+                                {/* View/Download buttons removed */}
                               </div>
                             </div>
                           )}
