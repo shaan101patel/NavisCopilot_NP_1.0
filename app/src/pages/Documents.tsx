@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { DocumentSearch } from "../components/search/DocumentSearch";
 import { toast } from "sonner";
+import { supabase } from "@/services/supabase";
 
 // Helper function to format date
 const formatDate = (dateInput: string | Date) => {
@@ -628,7 +629,28 @@ export default function Documents() {
       const data = await response.json();
       
       if (data.success) {
-        return { success: true, document: data.document };
+        // Normalize document response to match Document interface
+        const normalizedDocument: Document = {
+          id: data.document.id || data.document.document_id || '',
+          fileName: data.document.fileName || data.document.file_name || '',
+          originalName: data.document.originalName || data.document.original_name || '',
+          fileType: data.document.fileType || data.document.file_type || data.document.mime_type || '',
+          fileSize: data.document.fileSize || data.document.file_size || 0,
+          url: data.document.url || data.document.file_url || '',
+          uploadedBy: data.document.uploadedBy || data.document.uploaded_by || '',
+          uploadedByName: data.document.uploadedByName || data.document.uploaded_by_name || 'Unknown',
+          uploadDate: data.document.uploadDate || data.document.upload_date || data.document.created_at || new Date().toISOString(),
+          lastModified: data.document.lastModified || data.document.last_modified || data.document.updated_at || data.document.uploadDate || new Date().toISOString(),
+          category: data.document.category || '',
+          tags: data.document.tags || [],
+          description: data.document.description || '',
+          isPublic: data.document.isPublic ?? data.document.is_public ?? true,
+          downloadCount: data.document.downloadCount || data.document.download_count || 0,
+          metadata: data.document.metadata || {}
+        };
+        
+        console.log('Upload successful, normalized document:', normalizedDocument);
+        return { success: true, document: normalizedDocument };
       } else {
         throw new Error(data.error || 'Upload failed');
       }
@@ -640,6 +662,82 @@ export default function Documents() {
       };
     }
   }, [getAccessToken(), API_FUNCTIONS_URL]);
+
+  // Process document (trigger indexing)
+  const processDocument = useCallback(async (documentId: string, userId: string): Promise<{
+    success: boolean;
+    chunksCreated?: number;
+    processingTime?: number;
+    error?: string;
+  }> => {
+    const accessToken = getAccessToken();
+    if (!accessToken) {
+      console.error('processDocument: Not authenticated');
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    console.log(`🚀 Calling process-document for documentId: ${documentId}, userId: ${userId}`);
+    
+    try {
+      const requestPayload = {
+        documentId: documentId,
+        userId: userId
+      };
+      
+      console.log('📤 Request payload:', requestPayload);
+      
+      // Try using direct fetch with proper headers as fallback
+      // Note: This will only work if the edge function has CORS headers configured
+      const response = await fetch(`${API_FUNCTIONS_URL}/process-document`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'apikey': process.env.REACT_APP_SUPABASE_ANON_KEY || ''
+        },
+        body: JSON.stringify(requestPayload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({
+          error: `HTTP ${response.status}: ${response.statusText}`
+        }));
+        console.error('❌ Processing failed - response not OK:', errorData);
+        throw new Error(errorData.error?.message || errorData.error || `HTTP ${response.status}: Processing failed`);
+      }
+
+      const data = await response.json();
+
+      console.log('📥 Response data:', data);
+      
+      if (data && data.success) {
+        console.log(`✅ Processing successful: ${data.chunksCreated || 0} chunks created in ${data.processingTime || 0}ms`);
+        return { 
+          success: true, 
+          chunksCreated: data.chunksCreated,
+          processingTime: data.processingTime
+        };
+      } else if (data && !data.success) {
+        console.error('❌ Processing failed - success=false:', data.error);
+        throw new Error(data.error?.message || data.error || 'Processing failed');
+      } else {
+        console.error('❌ Unexpected response format:', data);
+        throw new Error('Unexpected response format from process-document');
+      }
+    } catch (error) {
+      console.error('❌ Processing error (catch block):', error);
+      const errorMessage = error instanceof Error ? error.message : 'Processing failed';
+      console.error('Error details:', {
+        message: errorMessage,
+        documentId,
+        userId
+      });
+      return { 
+        success: false, 
+        error: errorMessage
+      };
+    }
+  }, [getAccessToken]);
 
   // Removed direct download helper as download buttons are removed
 
@@ -762,9 +860,23 @@ export default function Documents() {
 
         if (result.success && result.document) {
           setUploadProgress(prev => ({ ...prev, [fileKey]: 100 }));
-          setDocuments(prev => [result.document!, ...prev]);
-          setFilteredDocuments(prev => [result.document!, ...prev]);
-          toast.success(`${file.name} uploaded successfully`);
+          
+          // Update document with processing status
+          const documentWithProcessing: Document = {
+            ...result.document,
+            processing: {
+              status: 'pending',
+              progress: 0,
+              jobType: 'indexing'
+            }
+          };
+          
+          setDocuments(prev => [documentWithProcessing, ...prev]);
+          setFilteredDocuments(prev => [documentWithProcessing, ...prev]);
+          toast.success(`${file.name} uploaded successfully. Processing will start automatically.`);
+          
+          // Note: Processing is now triggered automatically by upload-document edge function
+          // No need to call process-document from frontend - it happens server-side
         } else {
           throw new Error(result.error || 'Upload failed');
         }
@@ -782,7 +894,7 @@ export default function Documents() {
         }, 2000);
       }
     }
-  }, [selectedCategory, getAccessToken(), uploadDocument]);
+  }, [selectedCategory, getAccessToken(), uploadDocument, user?.id, processDocument]);
 
   // Handle drag and drop
   const handleDragOver = useCallback((e: React.DragEvent) => {
