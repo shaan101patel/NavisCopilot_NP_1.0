@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { Settings } from 'node:http2';
 
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://fjdurojwqtqoydmqjvmk.supabase.co';
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqZHVyb2p3cXRxb3lkbXFqdm1rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2MzU0NTQsImV4cCI6MjA2NzIxMTQ1NH0.jcz4nwvURFMqkicKBf-_oEk_rZFT2jdm365oWzn6CYQ';

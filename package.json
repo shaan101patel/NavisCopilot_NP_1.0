@@ -1,4 +1,16 @@
 {
+  "name": "naviscopilot-np-root",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "scripts": {
+    "start": "cd app && npm start",
+    "build": "cd app && npm run build",
+    "test": "cd app && npm test",
+    "lint": "cd app && npm run lint"
+  },
   "dependencies": {
     "@craco/craco": "^7.1.0",
     "@fontsource/inter": "^5.2.6",
