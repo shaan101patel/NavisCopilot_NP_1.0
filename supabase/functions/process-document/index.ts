@@ -2,7 +2,7 @@
 // Handles document text extraction, chunking, and embedding generation
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "npm:@supabase/supabase-js@2.94.1";
 import { DocumentProcessor } from "./lib/document-processor.ts";
 import { EmbeddingGenerator } from "./lib/embedding-generator.ts";
 import { ErrorHandler, ERROR_CODES } from "./lib/error-handler.ts";
@@ -55,23 +55,7 @@ serve(async (req) => {
 
     // Parse request body
     const body: ProcessRequest = await req.json();
-    const { documentId, userId } = body;
-    
-    // Support both new and legacy parameters
-    // New: targetChunks (2-3) and chunkOverlapPercent (15%)
-    // Legacy: chunkSize and chunkOverlap (will calculate targetChunks from text length)
-    let targetChunks = body.targetChunks || 3;
-    let chunkOverlapPercent = body.chunkOverlapPercent || 15; // 15% overlap
-    const legacyChunkSize = body.chunkSize;
-    const legacyChunkOverlap = body.chunkOverlap;
-    
-    // Legacy support: if chunkSize is provided, calculate targetChunks
-    if (body.chunkSize && !body.targetChunks) {
-      // This will be calculated after we extract text
-      targetChunks = 3; // Default, will be adjusted
-    }
-    
-    const bucketName = body.bucketName || "documents";
+    const { documentId, userId, bucketName = 'documents', chunkSize = 220, chunkOverlap = 60 } = body;
 
     if (!documentId || !userId) {
       return new Response(
@@ -89,16 +73,7 @@ serve(async (req) => {
       );
     }
 
-    // Root-cause note: previous version logged `chunkSize/chunkOverlap` vars that were never defined,
-    // which also hid the fact that `documentId/userId` weren't destructured from body in this file.
-    logger.info("Processing document", {
-      documentId,
-      userId,
-      targetChunks,
-      chunkOverlapPercent,
-      legacyChunkSize,
-      legacyChunkOverlap,
-    });
+    logger.info("Processing document", { documentId, userId, chunkSize, chunkOverlap });
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -150,7 +125,6 @@ serve(async (req) => {
       .from("documents")
       .update({
         processing_status: "processing",
-        indexingstatus: "processing",
         updated_at: new Date().toISOString(),
       })
       .eq("id", documentId);
@@ -188,15 +162,14 @@ serve(async (req) => {
 
     if (downloadError || !fileData) {
       logger.error("Storage download failed", { error: downloadError });
-      await supabase
-        .from("documents")
-        .update({
-          processing_status: "failed",
-          indexingstatus: "failed",
-          error_message: `Storage download failed: ${downloadError?.message}`,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", documentId);
+        await supabase
+          .from("documents")
+          .update({
+            processing_status: "failed",
+            error_message: `Storage download failed: ${downloadError?.message}`,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", documentId);
 
       return new Response(
         JSON.stringify({
@@ -233,7 +206,6 @@ serve(async (req) => {
         .from("documents")
         .update({
           processing_status: "failed",
-          indexingstatus: "failed",
           error_message: `Text extraction failed: ${error instanceof Error ? error.message : "Unknown error"}`,
           updated_at: new Date().toISOString(),
         })
@@ -257,7 +229,6 @@ serve(async (req) => {
         .from("documents")
         .update({
           processing_status: "failed",
-          indexingstatus: "failed",
           error_message: "No text could be extracted from the document",
           updated_at: new Date().toISOString(),
         })
@@ -306,7 +277,6 @@ serve(async (req) => {
           .from("documents")
           .update({
             processing_status: "failed",
-            indexingstatus: "failed",
             error_message: msg,
             updated_at: new Date().toISOString(),
           })
@@ -326,7 +296,6 @@ serve(async (req) => {
           .from("documents")
           .update({
             processing_status: "failed",
-            indexingstatus: "failed",
             error_message: `${msg} nulCount=${nulCount} nonPrintableRatio=${nonPrintableRatio.toFixed(4)}`,
             updated_at: new Date().toISOString(),
           })
@@ -353,65 +322,19 @@ serve(async (req) => {
       })
       .eq("id", documentId);
 
-    // Chunk the text intelligently with testing-focused parameters
-    const chunks = DocumentProcessor.chunkText(extractedText, targetChunks, chunkOverlapPercent);
-    
-    // Debug logging: original text length + first 150 chars preview
-    const textPreview = extractedText.slice(0, 150).replace(/\s+/g, " ").trim();
-    logger.info("Text chunking - original text", {
-      originalTextLength: extractedText.length,
-      preview: textPreview,
+    // Chunk the text
+    logger.info("Chunking text", { textLength: extractedText.length, chunkSize, chunkOverlap });
+    const chunks = DocumentProcessor.chunkText(extractedText, chunkSize, chunkOverlap);
+    logger.info("Text chunked", { 
+      chunkCount: chunks.length, 
+      averageChunkSize: chunks.length > 0 ? Math.round(chunks.reduce((sum, c) => sum + c.content.length, 0) / chunks.length) : 0
     });
-    
-    // Debug logging: number of chunks produced
-    logger.info("Text chunking - summary", {
-      chunkCount: chunks.length,
-      averageChunkSize: chunks.length > 0 
-        ? Math.round(chunks.reduce((sum, c) => sum + c.content.length, 0) / chunks.length) 
-        : 0,
-    });
-    
-    // Debug logging: for each chunk - chunk_index, startChar, endChar, first 40 chars, last 40 chars
-    chunks.forEach((chunk) => {
-      const first40 = chunk.content.slice(0, 40).replace(/\s+/g, " ").trim();
-      const last40 = chunk.content.slice(Math.max(0, chunk.content.length - 40)).replace(/\s+/g, " ").trim();
-      logger.info(`Chunk ${chunk.index}`, {
-        chunk_index: chunk.index,
-        startChar: chunk.startIndex,
-        endChar: chunk.endIndex,
-        content_length: chunk.content.length,
-        first40chars: first40,
-        last40chars: last40,
-      });
-    });
-    
-    if (chunks.length > 0) {
-      const first = chunks[0];
-      const last = chunks[Math.min(1, chunks.length - 1)];
-      logger.info("Chunk examples", {
-        first: {
-          index: first.index,
-          start: first.startIndex,
-          end: first.endIndex,
-          head: first.content.slice(0, 60),
-          tail: first.content.slice(Math.max(0, first.content.length - 60)),
-        },
-        secondOrLast: last ? {
-          index: last.index,
-          start: last.startIndex,
-          end: last.endIndex,
-          head: last.content.slice(0, 60),
-          tail: last.content.slice(Math.max(0, last.content.length - 60)),
-        } : null,
-      });
-    }
 
     if (chunks.length === 0) {
       await supabase
         .from("documents")
         .update({
           processing_status: "completed",
-          indexingstatus: "completed",
           chunk_count: 0,
           updated_at: new Date().toISOString(),
         })
@@ -574,7 +497,6 @@ serve(async (req) => {
           .from("documents")
           .update({
             processing_status: "failed",
-            indexingstatus: "failed",
             error_message: `Embedding generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
             updated_at: new Date().toISOString(),
           })
@@ -612,7 +534,6 @@ serve(async (req) => {
           embedding: documentEmbedding, // Try passing array directly
           chunk_count: chunks.length,
           processing_status: "completed",
-          indexingstatus: "completed",
           isindexed: true,
           processed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -639,7 +560,6 @@ serve(async (req) => {
         .update({
           chunk_count: chunks.length,
           processing_status: "completed",
-          indexingstatus: "completed",
           isindexed: true,
           processed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),

@@ -159,22 +159,21 @@ export class DocumentProcessor {
    */
   static chunkText(
     text: string,
-    targetChunks: number = 3, // Legacy param, ignored for text files
-    chunkOverlapPercent: number = 15 // Legacy param, ignored for text files
+    chunkSize: number = 1000, // Max chunk size in characters
+    chunkOverlap: number = 100 // Overlap size in characters
   ): Chunk[] {
     if (!text || text.trim().length === 0) {
       return [];
     }
 
     // Clean and normalize text while preserving paragraph structure
-    // Note: offsets will be relative to this cleaned text (which is stored in content_text)
     const cleanedText = this.cleanText(text);
     
-    // Testing-focused parameters
-    const maxChunkChars = 220;
-    const overlapChars = 60;
+    // Use provided parameters
+    const maxChunkChars = chunkSize;
+    const overlapChars = chunkOverlap;
 
-    // Use boundary-aware chunking with fixed parameters
+    // Use boundary-aware chunking with provided parameters
     return this.chunkByBoundariesWithPriority(cleanedText, maxChunkChars, overlapChars);
   }
 

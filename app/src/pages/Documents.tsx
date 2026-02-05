@@ -851,7 +851,7 @@ export default function Documents() {
         }, 100);
 
         const result = await uploadDocument(file, {
-          category: selectedCategory === "All" ? "General" : selectedCategory,
+          category: selectedCategory === "All" ? undefined : selectedCategory,
           description: "",
           isPublic: true
         });

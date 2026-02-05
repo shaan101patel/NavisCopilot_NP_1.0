@@ -104,7 +104,9 @@ serve(async (req) => {
     }
 
     // Get optional form fields
-    const category = formData.get("category")?.toString() || "General";
+    // Default to null if not provided or if "All" is selected (valid categories: Training, Marketing, Technical, Branding, Reports)
+    const categoryInput = formData.get("category")?.toString();
+    const category = categoryInput && categoryInput !== "All" && categoryInput !== "General" ? categoryInput : null;
     const description = formData.get("description")?.toString() || "";
     const isPublic = formData.get("isPublic")?.toString() !== "false";
     const ticketId = formData.get("ticketId")?.toString();
@@ -169,7 +171,6 @@ serve(async (req) => {
       description: description || null,
       is_public: isPublic,
       processing_status: "pending",
-      indexingstatus: "pending",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -203,6 +204,39 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
+    }
+
+    // Auto-trigger processing for text files
+    if (fileExtension === "txt") {
+      try {
+        const functionsUrl = `${supabaseUrl}/functions/v1/process-document`;
+        // Use the user's token (not service role key) since process-document validates user.id
+        const processResponse = await fetch(functionsUrl, {
+          method: "POST",
+          headers: {
+            "Authorization": authHeader, // Use the original user auth header
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            documentId: document.id,
+            userId: user.id,
+            bucketName: bucketName,
+            chunkSize: 220,
+            chunkOverlap: 60,
+          }),
+        });
+
+        if (!processResponse.ok) {
+          const errorText = await processResponse.text();
+          console.error("Failed to trigger process-document:", errorText);
+          // Don't fail the upload, just log the error
+        } else {
+          console.log("Successfully triggered process-document for document:", document.id);
+        }
+      } catch (processError) {
+        console.error("Error triggering process-document:", processError);
+        // Don't fail the upload, just log the error
+      }
     }
 
     // Normalize document response to match frontend expectations
