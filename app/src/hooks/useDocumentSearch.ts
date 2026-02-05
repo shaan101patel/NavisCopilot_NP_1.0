@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/services/supabase'
 
 // Types for search functionality
 export interface SearchResult {
@@ -63,18 +63,6 @@ export const useDocumentSearch = (): UseDocumentSearchReturn => {
     searchType: string
   } | null>(null)
 
-  // Get Supabase client from environment or context
-  const getSupabaseClient = useCallback(() => {
-    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL
-    const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Supabase configuration missing. Please check your environment variables.')
-    }
-    
-    return createClient(supabaseUrl, supabaseKey)
-  }, [])
-
   const search = useCallback(async (query: string, options: SearchOptions = {}) => {
     if (!query.trim()) {
       setError('Please enter a search query')
@@ -86,7 +74,6 @@ export const useDocumentSearch = (): UseDocumentSearchReturn => {
     setLastQuery(query)
 
     try {
-      const supabase = getSupabaseClient()
       
       // Prepare search payload
       const searchPayload = {
@@ -138,7 +125,7 @@ export const useDocumentSearch = (): UseDocumentSearchReturn => {
     } finally {
       setLoading(false)
     }
-  }, [getSupabaseClient])
+  }, [])
 
   const clearResults = useCallback(() => {
     setResults([])
